@@ -43,13 +43,13 @@ if "estado_quiz" not in st.session_state:
 if "modo_detectado" not in st.session_state:
     st.session_state["modo_detectado"] = False
 
-st.title("Agente con Human in the Loop (LangGraph + OpenAI)")
+st.title("Agente asitente de estudio de estaditica")
 
 graph_modo, graph_feedback = build_graphs()
 
 # --- Paso 1: Entrada de texto libre ---
 if not st.session_state["user_input"]:
-    st.markdown("### Bienvenido al agente con Human in the Loop")
+    st.markdown("### Bienvenido")
     st.markdown("Por favor, escribe cómo quieres interactuar con el agente.")
     user_input = st.text_input(
         "¿Cómo quieres interactuar con el agente? (Ejemplo: 'Quiero que me guíes' o 'Solo respóndeme')"
@@ -184,11 +184,11 @@ if st.session_state["modo"] == "guiado":
                     st.rerun()
             st.markdown("### Feedback del examen")
             st.info(f"**Puntaje promedio del nivel:** {st.session_state['puntaje_promedio']}")
-            st.markdown("### Fortalezas acumuladas")
+            st.markdown("### Fortalezas")
             st.write(st.session_state["fortalezas"])
-            st.markdown("### Debilidades acumuladas")
+            st.markdown("### Debilidades")
             st.write(st.session_state["debilidades"])
-            st.markdown("### Detalle por pregunta (nivel actual)")
+            st.markdown(f"### Detalle por pregunta nivel: {st.session_state['nivel']}")
             for d in st.session_state["detalle"]:
                 st.markdown(f"**Pregunta:** {d['pregunta']}")
                 st.markdown(f"**Respuesta:** {d['respuesta']}")
