@@ -43,7 +43,7 @@ if "estado_quiz" not in st.session_state:
 if "modo_detectado" not in st.session_state:
     st.session_state["modo_detectado"] = False
 
-st.title("Agente asitente de estudio de estaditica")
+st.title("Agente asitente de estudio de estadística")
 
 graph_modo, graph_feedback = build_graphs()
 
@@ -189,6 +189,7 @@ if st.session_state["modo"] == "guiado":
             st.markdown("### Debilidades")
             st.write(st.session_state["debilidades"])
             st.markdown(f"### Detalle por pregunta nivel: {st.session_state['nivel']}")
+            
             for d in st.session_state["detalle"]:
                 st.markdown(f"**Pregunta:** {d['pregunta']}")
                 st.markdown(f"**Respuesta:** {d['respuesta']}")
