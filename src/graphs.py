@@ -6,7 +6,6 @@ from typing import List, Dict, Any
 from langchain_openai import ChatOpenAI
 from langchain.prompts import ChatPromptTemplate
 from langchain_core.output_parsers.json import JsonOutputParser
-from langchain.chains import LLMChain
 import random
 
 quiz_preguntas = {
@@ -41,7 +40,7 @@ quiz_preguntas = {
         {"tema": "Inferencia", "pregunta": "¿Qué diferencia hay entre una estimación puntual y un intervalo de confianza?"}
     ]
 }
-
+# --- Definición del estado ---
 class State(TypedDict):
     user_input: str
     modo: str
@@ -54,7 +53,11 @@ class State(TypedDict):
     puntaje_promedio: float
     detalle: List[Dict[str, Any]]
     preguntas_seleccionadas: List[Dict[str, Any]]
+    temas: List[str]
+    subtemas : Dict[str, Any]
+    tema_actual : int
 
+# --- funciones ---
 def seleccionar_preguntas(nivel: str):
     preguntas = quiz_preguntas[nivel]
     temas = list(set([p["tema"] for p in preguntas]))
@@ -64,28 +67,16 @@ def seleccionar_preguntas(nivel: str):
         seleccionadas.append(random.choice(preguntas_tema))
     return seleccionadas
 
-def nodo_clasificacion_modo(state: State):
-    user_input = state["user_input"]
-    if not user_input:
-        return {"modo": ""}
-    llm = ChatOpenAI(model="gpt-3.5-turbo")
-    prompt = (
-        "Clasifica la siguiente intención del usuario SOLO como 'guiado' o 'libre'. "
-        "Si el usuario quiere que lo guíes paso a paso, responde 'guiado'. "
-        "Si solo quiere una respuesta directa, responde 'libre'. "
-        f"Intención del usuario: {user_input}\n"
-        "Respuesta:"
-    )
-    respuesta = llm.invoke(prompt).content.strip().lower()
-    if "guiado" in respuesta:
-        modo = "guiado"
-    elif "libre" in respuesta:
-        modo = "libre"
-    else:
-        modo = "libre"
-    return {"modo": modo}
+# --- prompts ---
+prompt_clasificar = ChatPromptTemplate.from_messages([
+    ("system",
+    "Clasifica la siguiente intención del usuario SOLO como 'guiado' o 'libre'. "
+    "Si el usuario quiere que lo guíes paso a paso, responde 'guiado'. "
+    "Si solo quiere una respuesta directa, responde 'libre'. "
+    "Intención del usuario: {user_input}\n"
+    "Respuesta:")
+])
 
-llm = ChatOpenAI(model="gpt-3.5-turbo")
 prompt_quiz = ChatPromptTemplate.from_messages([
     ("system",
      """Eres un experto en educación. Evalúa las siguientes respuestas del usuario a preguntas de probabilidad y estadística.
@@ -110,14 +101,79 @@ Respuestas del usuario:
 {respuestas_usuario}
 """)
 ])
-parser = JsonOutputParser()
-chain_quiz = LLMChain(
-    llm=llm,
-    prompt=prompt_quiz,
-    output_parser=parser
+
+prompt_plan = ChatPromptTemplate.from_template(
+    """
+Eres un tutor experto en estadística y probabilidad.
+El estudiante tiene el nivel: {nivel}.
+Sus debilidades principales son: {debilidades}.
+
+Crea un plan de estudio personalizado y devuélvelo SOLO en formato JSON con EXACTAMENTE esta estructura:
+{{
+    "plan_estudio": {{
+        "tema1": {{
+            "nombre": "Nombre del Tema 1",
+            "subtemas": [
+                "Subtema 1.1",
+                "Subtema 1.2",
+                "Subtema 1.3",
+                "Subtema 1.4"
+            ]
+        }},
+        "tema2": {{
+            "nombre": "Nombre del Tema 2",
+            "subtemas": [
+                "Subtema 2.1",
+                "Subtema 2.2",
+                "Subtema 2.3",
+                "Subtema 2.4"
+            ]
+        }},
+        "tema3": {{
+            "nombre": "Nombre del Tema 3",
+            "subtemas": [
+                "Subtema 3.1",
+                "Subtema 3.2",
+                "Subtema 3.3",
+                "Subtema 3.4"
+            ]
+        }}
+    }}
+}}
+
+Los temas deben enfocarse en las debilidades mencionadas.
+Cada tema DEBE tener exactamente 4 subtemas.
+IMPORTANTE: Devuelve SOLO el JSON, sin texto adicional.
+"""
 )
 
+# --- definir llm ---
+llm = ChatOpenAI(model="o4-mini")
+
+# --- nodos ---
+
+## --- nodo clasificar ---
+def nodo_clasificacion_modo(state: State):
+    user_input = state["user_input"]
+    if not user_input:
+            return {"modo": ""}
+        
+    llm_chain = prompt_clasificar | llm
+    respuesta = llm_chain.invoke({"user_input": user_input}).content.strip().lower()
+    
+    if "guiado" in respuesta:
+        modo = "guiado"
+    elif "libre" in respuesta:
+        modo = "libre"
+    else:
+        modo = "libre"
+    return {"modo": modo}
+
+## --- nodo calificar quiz y feedback ---
 def nodo_generar_feedback(state: State):
+    parser = JsonOutputParser()
+    chain_quiz = prompt_quiz | llm | parser
+    
     respuestas = state.get("respuestas", [])
     preguntas_seleccionadas = state.get("preguntas_seleccionadas", [])
     respuestas_usuario = []
@@ -129,11 +185,8 @@ def nodo_generar_feedback(state: State):
                 "tema": pregunta["tema"]
             })
     prompt_str = prompt_quiz.format(respuestas_usuario=str(respuestas_usuario))
-    raw_result = chain_quiz.llm.invoke(prompt_str).content
-    try:
-        data = parser.parse(raw_result)
-    except Exception:
-        data = {}
+    data = chain_quiz.invoke(prompt_str)
+
     resultados = data.get("resultados", [])
     detalle = data.get("detalle", [])
     promedio = sum(resultados) / len(resultados) if resultados else 0
@@ -147,6 +200,41 @@ def nodo_generar_feedback(state: State):
     state["detalle"] = detalle
     return state
 
+## --- nodo generar plan de estudio --- 
+
+def nodo_plan_estudio(state: State):
+    # Corregido: usar [] en lugar de .
+    debilidades = state["debilidades"]
+    debilidades_str = ", ".join(debilidades)
+    print(f"Debilidades: {debilidades_str}")
+
+    parser = JsonOutputParser()
+    chain = prompt_plan | llm | parser
+
+    # Corregido: usar [] para acceder a los elementos
+    respuesta = chain.invoke({
+        "nivel": state["nivel"],
+        "debilidades": debilidades_str
+    })
+
+    plan = respuesta["plan_estudio"]
+    state_actualizado = state.copy()
+
+    # Actualizar el estado con la información del plan
+    temas = []
+    subtemas = {}
+
+    for tema_key, tema_data in plan.items():
+        nombre_tema = tema_data["nombre"]
+        temas.append(nombre_tema)
+        subtemas[nombre_tema] = tema_data["subtemas"]
+
+    state_actualizado["temas"] = temas
+    state_actualizado["subtemas"] = subtemas
+    state_actualizado["tema_actual"] = 0
+
+    return state_actualizado
+
 def build_graphs():
     graph_builder = StateGraph(State)
     graph_builder.add_node("clasificacion_modo", nodo_clasificacion_modo)
@@ -159,5 +247,11 @@ def build_graphs():
     graph_builder2.set_entry_point("generar_feedback")
     graph_builder2.add_edge("generar_feedback", END)
     graph_feedback = graph_builder2.compile()
+    
+    graph_builder3 = StateGraph(State)
+    graph_builder3.add_node("plan_estudio", nodo_plan_estudio)
+    graph_builder3.set_entry_point("plan_estudio")
+    graph_builder3.add_edge("plan_estudio", END)
+    graph_plan = graph_builder3.compile()
 
-    return graph_modo, graph_feedback
+    return graph_modo, graph_feedback , graph_plan

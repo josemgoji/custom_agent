@@ -42,10 +42,16 @@ if "estado_quiz" not in st.session_state:
     st.session_state["estado_quiz"] = "en_curso"
 if "modo_detectado" not in st.session_state:
     st.session_state["modo_detectado"] = False
+if "temas" not in st.session_state:
+    st.session_state["temas"] = []
+if "subtemas" not in st.session_state:
+    st.session_state["subtemas"] = {}
+if "tema_actual" not in st.session_state:
+    st.session_state["tema_actual"] = 0
 
 st.title("Agente asitente de estudio de estadística")
 
-graph_modo, graph_feedback = build_graphs()
+graph_modo, graph_feedback, graph_plan = build_graphs()
 
 # --- Paso 1: Entrada de texto libre ---
 if not st.session_state["user_input"]:
@@ -80,14 +86,17 @@ if st.session_state["user_input"] and not st.session_state.get("modo_detectado",
 if st.session_state.get("modo_detectado", False):
     st.success(f"Modo detectado: {st.session_state['modo']}")
 
-# --- Lógica para el modo guiado ---
+# --- modo guiado ---
 if st.session_state["modo"] == "guiado":
+    # --- realizar el quiz ---
+    # crear las preguntas
     if not st.session_state["preguntas_seleccionadas"]:
         st.session_state["preguntas_seleccionadas"] = seleccionar_preguntas(st.session_state["nivel"])
 
     idx = st.session_state.get("pregunta_idx", 0)
     preguntas_seleccionadas = st.session_state["preguntas_seleccionadas"]
 
+    # mostrar las preguntas una a una
     if idx < len(preguntas_seleccionadas):
         st.subheader(f"Nivel actual: {st.session_state['nivel'].capitalize()}")
         st.markdown("Primero te haremos un quiz para ver en qué nivel estás.")
@@ -101,7 +110,9 @@ if st.session_state["modo"] == "guiado":
             st.session_state["pregunta_idx"] = idx + 1
             st.session_state["rerun_counter"] += 1
             st.rerun()
-
+    
+    # --- invocar el agente de feedback para calificar ---
+    # cuando termina de responder las preguntas
     if idx >= len(preguntas_seleccionadas):
         if not st.session_state.get("feedback", {}):
             result = graph_feedback.invoke({
@@ -129,6 +140,7 @@ if st.session_state["modo"] == "guiado":
             st.rerun()
 
         promedio = st.session_state["puntaje_promedio"]
+        # Clasificar el resultado y actualizar el estado del quiz
         if promedio >= 3:
             if st.session_state["nivel"] == "basico":
                 st.success(f"¡Felicidades! Has aprobado el nivel básico con un promedio de {promedio}.")
@@ -154,7 +166,10 @@ if st.session_state["modo"] == "guiado":
         else:
             st.error(f"No has aprobado el nivel {st.session_state['nivel']}. Tu promedio fue {promedio}.")
             st.session_state["estado_quiz"] = "finalizado"
-
+            
+            
+        # --- Mostrar el feedback y las fortalezas/debilidades ---
+        # cuando termina el examen si aprueba todo o reprueba un nivel
         if st.session_state["modo"] == "guiado" and st.session_state["estado_quiz"] == "finalizado":
             st.markdown("### ¿Qué deseas hacer ahora?")
             opcion = st.radio(
@@ -198,8 +213,95 @@ if st.session_state["modo"] == "guiado":
                 st.markdown(f"**Feedback:** {d['feedback']}")
                 st.markdown("---")
 
+# -- modo de explicacion --
 elif st.session_state["modo"] == "estudio":
     st.success("¡Bienvenido al estudio!")
 
+    # Inicializar variables de estado para el plan
+    if "plan_aprobado" not in st.session_state:
+        st.session_state["plan_aprobado"] = None
+    if "plan_actual" not in st.session_state:
+        st.session_state["plan_actual"] = None
+    if "sugerencia_plan" not in st.session_state:
+        st.session_state["sugerencia_plan"] = ""
+
+    # Si no hay un plan generado, generarlo
+    if not st.session_state["plan_actual"]:
+        with st.spinner("🕒 Cargando el plan de estudio..."):
+            plan = graph_plan.invoke({
+                'modo': st.session_state["modo"],
+                "nivel": st.session_state["nivel"],
+                "debilidades": st.session_state["debilidades"],
+            })
+            st.session_state["plan_actual"] = plan
+        st.rerun()
+
+    # Mostrar el plan actual
+    st.write(st.session_state["plan_actual"])
+
+    # Si el plan aún no ha sido aprobado
+    if st.session_state["plan_aprobado"] is None:
+        st.write("---")
+        st.write("¿Estás de acuerdo con este plan de estudio?")
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            if st.button("Sí", key="btn_si_plan"):
+                st.session_state["plan_aprobado"] = True
+                st.session_state["modo"] = "explicacion"  # Cambiar al modo explicación
+                st.rerun()
+
+        with col2:
+            if st.button("No", key="btn_no_plan"):
+                st.session_state["plan_aprobado"] = False
+                st.rerun()
+
+    # Si el usuario no está de acuerdo con el plan
+    if st.session_state["plan_aprobado"] is False:
+        st.write("---")
+        st.write("Por favor, indícanos qué te gustaría cambiar del plan:")
+        sugerencia = st.text_area("Tus sugerencias:", key="sugerencia_texto")
+
+        if st.button("Enviar sugerencias y regenerar plan"):
+            if not sugerencia.strip():
+                st.error("Por favor, escribe tus sugerencias antes de continuar.")
+            else:
+                st.session_state["sugerencia_plan"] = sugerencia
+                # Regenerar el plan incluyendo las sugerencias
+                nuevo_plan = graph_plan.invoke({
+                    'modo': st.session_state["modo"],
+                    "nivel": st.session_state["nivel"],
+                    "debilidades": st.session_state["debilidades"],
+                    "sugerencias": sugerencia
+                })
+                st.session_state["plan_actual"] = nuevo_plan
+                st.session_state["plan_aprobado"] = None
+                st.rerun()
+
+# -- modo de explicación (nueva sección) --
+elif st.session_state["modo"] == "explicacion":
+    st.title("Explicación del Plan de Estudio")
+    st.success("¡Bienvenido a la explicación detallada del plan!")
+
+    # Mostrar el plan aprobado
+    st.subheader("Tu plan de estudio aprobado:")
+    st.write(st.session_state["plan_actual"])
+
+    st.write("---")
+    st.write("Aquí comenzaremos a desarrollar el plan de estudio paso a paso.")
+    # Aquí puedes agregar la lógica para la explicación detallada del plan
+    # Por ejemplo:
+    # - Mostrar los temas en orden
+    # - Proporcionar recursos
+    # - Ejercicios prácticos
+    # - etc.
+
 elif st.session_state["modo"] == "libre":
     st.write("Estás en modo libre. Aquí puedes hacer preguntas directamente.")
+    # si estado es de pregunta de la explicacion, mostrar el tema de la explicacion
+    # respnder la pregunta  ypreguntar si tiene mas preguntas del tema
+    # si dice si 
+    # volver a responder
+    # si no
+    # llevarlo de nuevo al nodo estudio y aumentar el tema
