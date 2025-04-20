@@ -1,11 +1,16 @@
 # grafo_quiz.py
 
 from langgraph.graph import StateGraph, END
+from streamlit import context
 from typing_extensions import TypedDict
 from typing import List, Dict, Any
 from langchain_openai import ChatOpenAI
 from langchain.prompts import ChatPromptTemplate
 from langchain_core.output_parsers.json import JsonOutputParser
+from langchain_chroma import Chroma 
+from langchain_openai import OpenAIEmbeddings
+from langchain_core.documents import Document
+
 import random
 
 quiz_preguntas = {
@@ -56,6 +61,55 @@ class State(TypedDict):
     temas: List[str]
     subtemas : Dict[str, Any]
     tema_actual : int
+    contexto_recuperado: str
+    explicacion: str
+    
+# --- vector store ---
+# documentos de ejemplo para RAG
+ejemplo_documentos_rag = [
+    Document(
+        page_content="""
+        La probabilidad condicional es la probabilidad de que ocurra un evento A,
+        sabiendo que también ha ocurrido otro evento B. Se denota como P(A|B) y
+        se calcula como: P(A|B) = P(A∩B) / P(B)
+
+        La regla de la cadena establece que: P(A∩B) = P(A|B) × P(B)
+        """
+    ),
+    Document(
+        page_content="""
+        El Teorema de Bayes es una herramienta fundamental que relaciona las
+        probabilidades condicionales de dos eventos. Su fórmula es:
+        P(A|B) = P(B|A) × P(A) / P(B)
+
+        Este teorema es especialmente útil cuando tenemos probabilidades previas
+        y queremos actualizar nuestro conocimiento con nueva información.
+        """
+    ),
+    Document(
+        page_content="""
+        Los árboles de probabilidad son herramientas visuales que ayudan a
+        resolver problemas de probabilidad condicional. Cada rama representa
+        un evento y sus probabilidades asociadas.
+        """
+    )
+]
+# Configuración de componentes
+embeddings = OpenAIEmbeddings()
+
+# Crear y configurar Chroma
+vectorstore = Chroma.from_documents(
+    documents=ejemplo_documentos_rag,
+    embedding=embeddings,
+    collection_name="estadistica_probabilidad",
+    persist_directory="./chroma"
+)
+
+retriever = vectorstore.as_retriever(
+    search_type="similarity",
+    search_kwargs={"k": 3}
+)
+llm = ChatOpenAI(model="o4-mini")
 
 # --- funciones ---
 def seleccionar_preguntas(nivel: str):
@@ -147,6 +201,35 @@ IMPORTANTE: Devuelve SOLO el JSON, sin texto adicional.
 """
 )
 
+PROMPT_EXPLICACION = ChatPromptTemplate.from_messages([
+    ("system", """Eres un tutor experto en estadística y probabilidad.
+    Tu tarea es explicar conceptos de manera clara y estructurada usando formato markdown.
+
+    Instrucciones importantes:
+    - Usa el contexto proporcionado como referencia y validación
+    - Complementa la explicación con tu conocimiento general del tema
+    - Asegúrate que la información sea precisa y actualizada
+    - Adapta el nivel de complejidad según el estudiante
+    - Incluye definiciones, fórmulas y ejemplos prácticos"""),
+
+    ("user", """Para el tema "{tema_actual}", revisa el siguiente contexto como referencia:
+    {contexto}
+
+    Genera una explicación completa que:
+    1. Valide y use la información relevante del contexto
+    2. Complemente con conocimiento adicional importante
+    3. Cubra los siguientes subtemas:
+    {subtemas_str}
+
+    La explicación debe incluir:
+    - Definiciones claras y completas
+    - Fórmulas relevantes con explicación
+    - Ejemplos prácticos del mundo real
+    - Formato markdown bien estructurado
+    - Analogías para facilitar comprensión
+    """)
+])
+
 # --- definir llm ---
 llm = ChatOpenAI(model="o4-mini")
 
@@ -206,7 +289,6 @@ def nodo_plan_estudio(state: State):
     # Corregido: usar [] en lugar de .
     debilidades = state["debilidades"]
     debilidades_str = ", ".join(debilidades)
-    print(f"Debilidades: {debilidades_str}")
 
     parser = JsonOutputParser()
     chain = prompt_plan | llm | parser
@@ -235,6 +317,53 @@ def nodo_plan_estudio(state: State):
 
     return state_actualizado
 
+def recuperar_contexto(state: State) -> State:
+    """Recupera información relevante del tema actual usando RAG"""
+    tema_idx = state["tema_actual"]
+    print(tema_idx)
+    tema_actual = state["temas"][tema_idx]
+    print(tema_actual)
+    subtemas = state["subtemas"][tema_actual]
+    #subtemas = subtemas_todos.get(tema_actual,[])
+    #subtemas = ["hola"]
+    print(subtemas)
+    
+    # Construir query para RAG
+    subtemas_str = "\n".join([f"- {s}" for s in subtemas])
+    query = f"""
+    Información detallada sobre {tema_actual}:
+    {subtemas_str}
+    Incluir definiciones, fórmulas y ejemplos.
+    """
+
+    # Obtener documentos relevantes
+    documentos = retriever.get_relevant_documents(query)
+    contexto = "\n\n".join([doc.page_content for doc in documentos])
+
+    return {**state, "contexto_recuperado": contexto}
+
+def generar_explicacion(state: State) -> State:
+    """Genera la explicación en formato markdown"""
+    tema_idx = state["tema_actual"]
+    tema_actual = state["temas"][tema_idx]
+    subtemas = state["subtemas"][tema_actual]
+    contexto = state["contexto_recuperado"]
+
+    # Preparar subtemas para el prompt
+    subtemas_str = "\n".join([f"- {s}" for s in subtemas])
+
+    # Generar explicación usando el LLM
+    messages = PROMPT_EXPLICACION.format_messages(
+        contexto=contexto,
+        tema_actual=tema_actual,
+        subtemas_str=subtemas_str
+    )
+
+    explicacion = llm.invoke(messages).content
+
+    return {**state, "explicacion": explicacion}
+    
+
 def build_graphs():
     graph_builder = StateGraph(State)
     graph_builder.add_node("clasificacion_modo", nodo_clasificacion_modo)
@@ -253,5 +382,13 @@ def build_graphs():
     graph_builder3.set_entry_point("plan_estudio")
     graph_builder3.add_edge("plan_estudio", END)
     graph_plan = graph_builder3.compile()
+    
+    graph_builder4 = StateGraph(State)
+    graph_builder4.add_node("recuperar_contexto", recuperar_contexto)
+    graph_builder4.add_node("generar_explicacion", generar_explicacion)
+    graph_builder4.set_entry_point("recuperar_contexto")
+    graph_builder4.add_edge("recuperar_contexto", "generar_explicacion")
+    graph_builder4.add_edge("generar_explicacion", END)
+    graph_explicacion = graph_builder4.compile()
 
-    return graph_modo, graph_feedback , graph_plan
+    return graph_modo, graph_feedback , graph_plan , graph_explicacion

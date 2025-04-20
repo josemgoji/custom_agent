@@ -48,10 +48,14 @@ if "subtemas" not in st.session_state:
     st.session_state["subtemas"] = {}
 if "tema_actual" not in st.session_state:
     st.session_state["tema_actual"] = 0
-
+if "contexto_recuperado" not in st.session_state:
+    st.session_state["contexto_recuperado"] = {}
+if "explicacion" not in st.session_state:
+    st.session_state["explicacion"] = ""
+    
 st.title("Agente asitente de estudio de estadística")
 
-graph_modo, graph_feedback, graph_plan = build_graphs()
+graph_modo, graph_feedback, graph_plan, graph_explicacion = build_graphs()
 
 # --- Paso 1: Entrada de texto libre ---
 if not st.session_state["user_input"]:
@@ -232,9 +236,14 @@ elif st.session_state["modo"] == "estudio":
                 'modo': st.session_state["modo"],
                 "nivel": st.session_state["nivel"],
                 "debilidades": st.session_state["debilidades"],
+                "explicacion": st.session_state["explicacion"],
             })
+            st.session_state["temas"] = plan.get("temas", [])
+            st.session_state["subtemas"] = plan.get("subtemas", {})
+            st.session_state["tema_actual"] = plan.get("tema_actual", 0)
             st.session_state["plan_actual"] = plan
-        st.rerun()
+            
+        st.rerun()            
 
     # Mostrar el plan actual
     st.write(st.session_state["plan_actual"])
@@ -269,27 +278,46 @@ elif st.session_state["modo"] == "estudio":
             else:
                 st.session_state["sugerencia_plan"] = sugerencia
                 # Regenerar el plan incluyendo las sugerencias
-                nuevo_plan = graph_plan.invoke({
-                    'modo': st.session_state["modo"],
-                    "nivel": st.session_state["nivel"],
-                    "debilidades": st.session_state["debilidades"],
-                    "sugerencias": sugerencia
-                })
-                st.session_state["plan_actual"] = nuevo_plan
-                st.session_state["plan_aprobado"] = None
-                st.rerun()
+                with st.spinner("🕒 Cargando el nuevo plan de estudio..."):
+                    nuevo_plan = graph_plan.invoke({
+                        'modo': st.session_state["modo"],
+                        "nivel": st.session_state["nivel"],
+                        "debilidades": st.session_state["debilidades"],
+                        "sugerencias": sugerencia
+                    })
+                    st.session_state["plan_aprobado"] = None
+                    st.session_state["temas"] = plan.get("temas", [])
+                    st.session_state["subtemas"] = plan.get("subtemas", {})
+                    st.session_state["tema_actual"] = plan.get("tema_actual", 0)
+                    
+                st.rerun()      
 
 # -- modo de explicación (nueva sección) --
 elif st.session_state["modo"] == "explicacion":
     st.title("Explicación del Plan de Estudio")
     st.success("¡Bienvenido a la explicación detallada del plan!")
+    
+    # st.write(st.session_state["tema_actual"])
+    # st.write(st.session_state["temas"])
+    # st.write(st.session_state["subtemas"])
+    # st.write(st.session_state["modo"])
+
+    
+    explicacion = graph_explicacion.invoke({
+        "tema_actual": st.session_state["tema_actual"],
+        "nivel": st.session_state["nivel"],
+        "subtemas": st.session_state["subtemas"],
+        "temas": st.session_state["temas"],
+        "contexto_recuperado": st.session_state["contexto_recuperado"],
+        "modo" : st.session_state["modo"],
+    })
+    
+    st.write(explicacion['explicacion'])
 
     # Mostrar el plan aprobado
-    st.subheader("Tu plan de estudio aprobado:")
-    st.write(st.session_state["plan_actual"])
-
-    st.write("---")
-    st.write("Aquí comenzaremos a desarrollar el plan de estudio paso a paso.")
+    #st.subheader("Tu plan de estudio aprobado:")
+    #st.write(st.session_state["plan_actual"])
+    
     # Aquí puedes agregar la lógica para la explicación detallada del plan
     # Por ejemplo:
     # - Mostrar los temas en orden
