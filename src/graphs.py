@@ -1,7 +1,6 @@
 # grafo_quiz.py
 
 from langgraph.graph import StateGraph, END
-from streamlit import context
 from typing_extensions import TypedDict
 from typing import List, Dict, Any
 from langchain_openai import ChatOpenAI

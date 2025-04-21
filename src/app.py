@@ -237,6 +237,7 @@ elif st.session_state["modo"] == "estudio":
                 "nivel": st.session_state["nivel"],
                 "debilidades": st.session_state["debilidades"],
                 "explicacion": st.session_state["explicacion"],
+                
             })
             st.session_state["temas"] = plan.get("temas", [])
             st.session_state["subtemas"] = plan.get("subtemas", {})
@@ -286,9 +287,10 @@ elif st.session_state["modo"] == "estudio":
                         "sugerencias": sugerencia
                     })
                     st.session_state["plan_aprobado"] = None
-                    st.session_state["temas"] = plan.get("temas", [])
-                    st.session_state["subtemas"] = plan.get("subtemas", {})
-                    st.session_state["tema_actual"] = plan.get("tema_actual", 0)
+                    st.session_state["temas"] = nuevo_plan.get("temas", [])
+                    st.session_state["subtemas"] = nuevo_plan.get("subtemas", {})
+                    st.session_state["tema_actual"] = nuevo_plan.get("tema_actual", 0)
+                    st.session_state["plan_actual"] = nuevo_plan
                     
                 st.rerun()      
 
