@@ -119,8 +119,8 @@ if st.session_state["modo"] == "guiado":
         st.markdown("Primero te haremos un quiz para ver en qué nivel estás.")
         pregunta = preguntas_seleccionadas[idx]["pregunta"]
         st.markdown(f"**Pregunta {idx+1}:** {pregunta}")
-        respuesta = st.text_input("Tu respuesta:", key=f"respuesta_input_{idx}_{st.session_state['rerun_counter']}")
-        if st.button("Enviar respuesta", key=f"btn_respuesta_{idx}_{st.session_state['rerun_counter']}"):
+        respuesta = st.text_area("Tu respuesta:", key=f"respuesta_input_{idx}_{st.session_state['rerun_counter']}")
+        if st.button("Enviar respuesta", key=f"btn_respuesta_{idx}_{st.session_state['rerun_counter']}") or respuesta:
             respuestas = st.session_state.get("respuestas", [])
             respuestas.append(respuesta)
             st.session_state["respuestas"] = respuestas
