@@ -1,6 +1,6 @@
-# grafo_quiz.py
-
-from langgraph.graph import StateGraph, END
+from pyexpat.errors import messages
+from langgraph.graph import StateGraph, END , START
+from openai import chat
 from typing_extensions import TypedDict
 from typing import List, Dict, Any
 from langchain_openai import ChatOpenAI
@@ -8,8 +8,17 @@ from langchain.prompts import ChatPromptTemplate
 from langchain_core.output_parsers.json import JsonOutputParser
 from langchain_chroma import Chroma 
 from langchain_openai import OpenAIEmbeddings
-from langchain_core.documents import Document
-
+from pathlib import Path
+from langchain.tools import Tool
+from langchain.tools import tool
+from langchain_community.tools import DuckDuckGoSearchRun
+from langgraph.prebuilt import tools_condition
+from langchain_core.messages import SystemMessage
+from langgraph.prebuilt.tool_node import ToolNode
+from langgraph.graph.message import AnyMessage
+from langgraph.graph.message import add_messages
+from typing import Annotated
+import numpy as np
 import random
 
 quiz_preguntas = {
@@ -62,53 +71,62 @@ class State(TypedDict):
     tema_actual : int
     contexto_recuperado: str
     explicacion: str
+    messages: Annotated[list[AnyMessage], add_messages]
     
 # --- vector store ---
-# documentos de ejemplo para RAG
-ejemplo_documentos_rag = [
-    Document(
-        page_content="""
-        La probabilidad condicional es la probabilidad de que ocurra un evento A,
-        sabiendo que también ha ocurrido otro evento B. Se denota como P(A|B) y
-        se calcula como: P(A|B) = P(A∩B) / P(B)
+persist_path = Path('./data')
+vectorstore = Chroma(persist_directory=str(persist_path), embedding_function=OpenAIEmbeddings())
 
-        La regla de la cadena establece que: P(A∩B) = P(A|B) × P(B)
-        """
-    ),
-    Document(
-        page_content="""
-        El Teorema de Bayes es una herramienta fundamental que relaciona las
-        probabilidades condicionales de dos eventos. Su fórmula es:
-        P(A|B) = P(B|A) × P(A) / P(B)
-
-        Este teorema es especialmente útil cuando tenemos probabilidades previas
-        y queremos actualizar nuestro conocimiento con nueva información.
-        """
-    ),
-    Document(
-        page_content="""
-        Los árboles de probabilidad son herramientas visuales que ayudan a
-        resolver problemas de probabilidad condicional. Cada rama representa
-        un evento y sus probabilidades asociadas.
-        """
-    )
-]
-# Configuración de componentes
-embeddings = OpenAIEmbeddings()
-
-# Crear y configurar Chroma
-vectorstore = Chroma.from_documents(
-    documents=ejemplo_documentos_rag,
-    embedding=embeddings,
-    collection_name="estadistica_probabilidad",
-    persist_directory="./chroma"
-)
 
 retriever = vectorstore.as_retriever(
     search_type="similarity",
     search_kwargs={"k": 3}
 )
 llm = ChatOpenAI(model="o4-mini")
+
+# --- difinir tools ----
+
+@tool
+def informe_estadistico_tool(numbers: str) -> str:
+    """Retorna un informe estadistico de una lista de numeros sparados por coma. El informe estadistico obtiene la siguiente información de la lista: count, mean, standard deviation, min, max, quartile 1, quartile 2 and quartile 3"""
+    try:
+        nums = [float(x.strip()) for x in numbers.split(",") if x.strip()]
+        if not nums:
+            return "No valid numbers provided."
+
+        nums_array = np.array(nums)
+
+        count = len(nums_array)
+        mean = np.mean(nums_array)
+        std = np.std(nums_array)
+        min_val = np.min(nums_array)
+        max_val = np.max(nums_array)
+        q1 = np.percentile(nums_array, 25)
+        q2 = np.percentile(nums_array, 50)
+        q3 = np.percentile(nums_array, 75)
+
+        result = (
+            f"Informe estadistico de la lista:\n"
+            f"- Count: {count}\n"
+            f"- Mean: {mean:.4f}\n"
+            f"- Standard Deviation: {std:.4f}\n"
+            f"- Min: {min_val}\n"
+            f"- Max: {max_val}\n"
+            f"- Q1 (25th percentile): {q1}\n"
+            f"- Q2 (median): {q2}\n"
+            f"- Q3 (75th percentile): {q3}"
+        )
+
+        return result
+
+    except Exception as e:
+        return f"Error processing numbers: {str(e)}"
+    
+    
+search_tool = DuckDuckGoSearchRun()
+
+
+tools = [search_tool, informe_estadistico_tool]
 
 # --- funciones ---
 def seleccionar_preguntas(nivel: str):
@@ -319,13 +337,8 @@ def nodo_plan_estudio(state: State):
 def recuperar_contexto(state: State) -> State:
     """Recupera información relevante del tema actual usando RAG"""
     tema_idx = state["tema_actual"]
-    print(tema_idx)
     tema_actual = state["temas"][tema_idx]
-    print(tema_actual)
     subtemas = state["subtemas"][tema_actual]
-    #subtemas = subtemas_todos.get(tema_actual,[])
-    #subtemas = ["hola"]
-    print(subtemas)
     
     # Construir query para RAG
     subtemas_str = "\n".join([f"- {s}" for s in subtemas])
@@ -352,15 +365,54 @@ def generar_explicacion(state: State) -> State:
     subtemas_str = "\n".join([f"- {s}" for s in subtemas])
 
     # Generar explicación usando el LLM
-    messages = PROMPT_EXPLICACION.format_messages(
+    mensages = PROMPT_EXPLICACION.format_messages(
         contexto=contexto,
         tema_actual=tema_actual,
         subtemas_str=subtemas_str
     )
 
-    explicacion = llm.invoke(messages).content
+    explicacion = llm.invoke(mensages).content
 
     return {**state, "explicacion": explicacion}
+
+
+## --- nodo preguntas libres ---
+
+def assistant(state: State):
+    last_message = state["messages"][-1]
+    chat_with_tools = llm.bind_tools(tools)
+    query = last_message.content
+
+    docs = retriever.invoke(query)
+    docs = docs[:5]  # Opcional: limitar a 5 docs
+
+    if docs:  # Si el retriever devuelve algo
+        context = "\n\n".join(doc.page_content for doc in docs)
+        system_message = SystemMessage(content=f"""
+Eres un asistente inteligente.
+
+Utiliza la siguiente información como fuente principal para elaborar tu respuesta. 
+Sin embargo, si consideras que la información proporcionada no es suficiente o no responde directamente a la pregunta, 
+puedes basarte en tu conocimiento general para completar o mejorar la respuesta.
+
+No inventes datos si no estás seguro.
+
+Información recuperada:
+---
+{context}
+---
+""")
+        messages = [system_message] + state["messages"]
+    else:
+        # Si no hay documentos, simplemente no añades ningún contexto
+        messages = state["messages"]
+    
+    respuesta = chat_with_tools.invoke(messages)
+
+    return {
+        "messages": [respuesta.content],
+    }
+
     
 
 def build_graphs():
@@ -389,5 +441,15 @@ def build_graphs():
     graph_builder4.add_edge("recuperar_contexto", "generar_explicacion")
     graph_builder4.add_edge("generar_explicacion", END)
     graph_explicacion = graph_builder4.compile()
+    
+    graph_builder5 = StateGraph(State)
+    graph_builder5.add_node("assistant", assistant)
+    graph_builder5.add_node("tools", ToolNode(tools))
 
-    return graph_modo, graph_feedback , graph_plan , graph_explicacion
+    graph_builder5.add_edge(START, "assistant")
+    graph_builder5.add_conditional_edges("assistant", tools_condition)
+    graph_builder5.add_edge("tools", "assistant")
+    graph_libre = graph_builder5.compile()
+    
+
+    return graph_modo, graph_feedback , graph_plan , graph_explicacion, graph_libre

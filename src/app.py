@@ -52,10 +52,30 @@ if "contexto_recuperado" not in st.session_state:
     st.session_state["contexto_recuperado"] = {}
 if "explicacion" not in st.session_state:
     st.session_state["explicacion"] = ""
+if "messages" not in st.session_state:
+    st.session_state["messages"] = []
+if 'message_history' not in st.session_state:
+    st.session_state.message_history = [
+        {'content': "Holi estoy aqui para ayudar", 'type': 'assistant'}
+    ]
+    
+# --- Botón flotante para cambiar de modo ---
+with st.sidebar:
+    st.markdown("## Cambiar de Modo")
+
+    if st.button("Modo Libre"):
+        st.session_state["modo"] = "libre"
+        st.session_state["modo_detectado"] = True
+        st.rerun()
+
+    if st.button("Modo Guiado"):
+        st.session_state["modo"] = "guiado"
+        st.session_state["modo_detectado"] = True
+        st.rerun()
     
 st.title("Agente asitente de estudio de estadística")
 
-graph_modo, graph_feedback, graph_plan, graph_explicacion = build_graphs()
+graph_modo, graph_feedback, graph_plan, graph_explicacion, graph_libre = build_graphs()
 
 # --- Paso 1: Entrada de texto libre ---
 if not st.session_state["user_input"]:
@@ -220,14 +240,15 @@ if st.session_state["modo"] == "guiado":
 # -- modo de explicacion --
 elif st.session_state["modo"] == "estudio":
     st.success("¡Bienvenido al estudio!")
+    st.title("Plan de Estudio")
 
     # Inicializar variables de estado para el plan
-    if "plan_aprobado" not in st.session_state:
-        st.session_state["plan_aprobado"] = None
+    # if "plan_aprobado" not in st.session_state:
+    #     st.session_state["plan_aprobado"] = None
     if "plan_actual" not in st.session_state:
         st.session_state["plan_actual"] = None
-    if "sugerencia_plan" not in st.session_state:
-        st.session_state["sugerencia_plan"] = ""
+    # if "sugerencia_plan" not in st.session_state:
+    #     st.session_state["sugerencia_plan"] = ""
 
     # Si no hay un plan generado, generarlo
     if not st.session_state["plan_actual"]:
@@ -248,90 +269,87 @@ elif st.session_state["modo"] == "estudio":
 
     # Mostrar el plan actual
     st.write(st.session_state["plan_actual"])
+    
+    if st.button("Continuar", key="btn_next"):
+        st.session_state["modo"] = "explicacion"
+        st.rerun()  
 
-    # Si el plan aún no ha sido aprobado
-    if st.session_state["plan_aprobado"] is None:
+# -- modo de explicación (nueva sección) --
+elif st.session_state["modo"] == "explicacion":
+    tema = st.session_state["tema_actual"]
+
+    if "explicaciones" not in st.session_state:
+        st.session_state["explicaciones"] = {}
+
+    if tema < len(st.session_state["temas"]):
+        st.title("Explicación del Plan de Estudio")
+        st.success("¡Bienvenido a la explicación detallada del plan!")
+
+        if tema not in st.session_state["explicaciones"]:
+            # SOLO muestra spinner si de verdad vas a generar la explicación
+            with st.spinner(f"🕒 Cargando explicación del tema {st.session_state['temas'][tema]}"):
+                explicacion = graph_explicacion.invoke({
+                    "tema_actual": tema,
+                    "nivel": st.session_state["nivel"],
+                    "subtemas": st.session_state["subtemas"],
+                    "temas": st.session_state["temas"],
+                    "contexto_recuperado": st.session_state["contexto_recuperado"],
+                    "modo": st.session_state["modo"],
+                })
+                st.session_state["explicaciones"][tema] = explicacion["explicacion"]
+
+            st.toast("Explicación lista ✅", icon="📚")
+
+        # Mostrar la explicación ya guardada
+        st.write(st.session_state["explicaciones"][tema])
+
         st.write("---")
-        st.write("¿Estás de acuerdo con este plan de estudio?")
+        st.write("¿Pasamos al siguiente tema?")
 
         col1, col2 = st.columns(2)
 
         with col1:
-            if st.button("Sí", key="btn_si_plan"):
-                st.session_state["plan_aprobado"] = True
-                st.session_state["modo"] = "explicacion"  # Cambiar al modo explicación
+            if st.button("Siguiente tema", key=f"btn_siguiente_tema_{tema}"):
+                st.session_state["tema_actual"] += 1
                 st.rerun()
-
-        with col2:
-            if st.button("No", key="btn_no_plan"):
-                st.session_state["plan_aprobado"] = False
-                st.rerun()
-
-    # Si el usuario no está de acuerdo con el plan
-    if st.session_state["plan_aprobado"] is False:
+    else:
         st.write("---")
-        st.write("Por favor, indícanos qué te gustaría cambiar del plan:")
-        sugerencia = st.text_area("Tus sugerencias:", key="sugerencia_texto")
-
-        if st.button("Enviar sugerencias y regenerar plan"):
-            if not sugerencia.strip():
-                st.error("Por favor, escribe tus sugerencias antes de continuar.")
-            else:
-                st.session_state["sugerencia_plan"] = sugerencia
-                # Regenerar el plan incluyendo las sugerencias
-                with st.spinner("🕒 Cargando el nuevo plan de estudio..."):
-                    nuevo_plan = graph_plan.invoke({
-                        'modo': st.session_state["modo"],
-                        "nivel": st.session_state["nivel"],
-                        "debilidades": st.session_state["debilidades"],
-                        "sugerencias": sugerencia
-                    })
-                    st.session_state["plan_aprobado"] = None
-                    st.session_state["temas"] = nuevo_plan.get("temas", [])
-                    st.session_state["subtemas"] = nuevo_plan.get("subtemas", {})
-                    st.session_state["tema_actual"] = nuevo_plan.get("tema_actual", 0)
-                    st.session_state["plan_actual"] = nuevo_plan
-                    
-                st.rerun()      
-
-# -- modo de explicación (nueva sección) --
-elif st.session_state["modo"] == "explicacion":
-    st.title("Explicación del Plan de Estudio")
-    st.success("¡Bienvenido a la explicación detallada del plan!")
-    
-    # st.write(st.session_state["tema_actual"])
-    # st.write(st.session_state["temas"])
-    # st.write(st.session_state["subtemas"])
-    # st.write(st.session_state["modo"])
-
-    
-    explicacion = graph_explicacion.invoke({
-        "tema_actual": st.session_state["tema_actual"],
-        "nivel": st.session_state["nivel"],
-        "subtemas": st.session_state["subtemas"],
-        "temas": st.session_state["temas"],
-        "contexto_recuperado": st.session_state["contexto_recuperado"],
-        "modo" : st.session_state["modo"],
-    })
-    
-    st.write(explicacion['explicacion'])
-
-    # Mostrar el plan aprobado
-    #st.subheader("Tu plan de estudio aprobado:")
-    #st.write(st.session_state["plan_actual"])
-    
-    # Aquí puedes agregar la lógica para la explicación detallada del plan
-    # Por ejemplo:
-    # - Mostrar los temas en orden
-    # - Proporcionar recursos
-    # - Ejercicios prácticos
-    # - etc.
+        st.write("felicidades has terminado el plan de estudio, hagamos nuevamente el examen para reforzar los ocnocimientos")
+        
+        if st.button("Continuar", key="btn_continuar"):
+            st.session_state['modo'] = "guiado"
+            st.session_state['estado_quiz'] = "en_curso"
+            st.session_state["pregunta_idx"] = 0
+            st.session_state["plan_aprobado"] = None
+            st.session_state["debilidades"] = []
+            st.session_state["fortalezas"] = []
+            st.session_state["respuestas"] = []
+            st.session_state["tema_actual"] = 0
+            st.session_state["plan_actual"] = None
+            st.session_state["temas"] = []
+            st.session_state["subtemas"] = {}
+            st.rerun()
 
 elif st.session_state["modo"] == "libre":
     st.write("Estás en modo libre. Aquí puedes hacer preguntas directamente.")
-    # si estado es de pregunta de la explicacion, mostrar el tema de la explicacion
-    # respnder la pregunta  ypreguntar si tiene mas preguntas del tema
-    # si dice si 
-    # volver a responder
-    # si no
-    # llevarlo de nuevo al nodo estudio y aumentar el tema
+    user_input = st.chat_input(
+        "Ecriba su pregunta aquí:",
+    )
+    
+    if user_input:
+        # Agrega el mensaje del usuario al historial
+        st.session_state.message_history.append({'content': user_input, 'type': 'user'})
+        
+        respuesta = graph_libre.invoke({
+            "messages": user_input,
+        })
+        
+        contenido_respuesta = respuesta["messages"][1].content
+        
+        st.session_state.message_history.append({'content': contenido_respuesta, 'type': 'assistant'})
+        
+        
+        for message in st.session_state.message_history:
+            with st.chat_message(message['type']):
+                st.markdown(message['content'])
+    
