@@ -13,7 +13,7 @@ from langchain.tools import Tool
 from langchain.tools import tool
 from langchain_community.tools import DuckDuckGoSearchRun
 from langgraph.prebuilt import tools_condition
-from langchain_core.messages import SystemMessage
+from langchain_core.messages import SystemMessage, AIMessage, HumanMessage
 from langgraph.prebuilt.tool_node import ToolNode
 from langgraph.graph.message import AnyMessage
 from langgraph.graph.message import add_messages
@@ -74,7 +74,7 @@ class State(TypedDict):
     messages: Annotated[list[AnyMessage], add_messages]
     
 # --- vector store ---
-persist_path = Path('./data')
+persist_path = Path('./chroma')
 vectorstore = Chroma(persist_directory=str(persist_path), embedding_function=OpenAIEmbeddings())
 
 
@@ -355,35 +355,35 @@ def assistant(state: State):
     last_message = state["messages"][-1]
     chat_with_tools = llm.bind_tools(tools)
     query = last_message.content
+    print(f"Query recibida: {query}")
+    
 
     docs = retriever.invoke(query)
-    docs = docs[:5]  # Opcional: limitar a 5 docs
+    print(f"Documentos recuperados: {len(docs)}")
 
-    if docs:  # Si el retriever devuelve algo
+    if docs:
         context = "\n\n".join(doc.page_content for doc in docs)
+        print(f"Contexto recuperado (primeros 300 chars): {context[:300]}")
         system_message = SystemMessage(content=f"""
 Eres un asistente inteligente.
 
-Utiliza la siguiente información como fuente principal para elaborar tu respuesta. 
-Sin embargo, si consideras que la información proporcionada no es suficiente o no responde directamente a la pregunta, 
-puedes basarte en tu conocimiento general para completar o mejorar la respuesta.
-
-No inventes datos si no estás seguro.
+Utiliza la siguiente información como fuente principal para elaborar tu respuesta.
+Si no es suficiente, usa tu conocimiento general.
 
 Información recuperada:
 ---
 {context}
 ---
 """)
-        messages = [system_message] + state["messages"]
+        messages = [system_message] +  state["messages"]
     else:
-        # Si no hay documentos, simplemente no añades ningún contexto
         messages = state["messages"]
-    
+
     respuesta = chat_with_tools.invoke(messages)
+    print(f"Respuesta generada: {respuesta.content}")
 
     return {
-        "messages": [respuesta.content],
+        "messages": [chat_with_tools.invoke(state["messages"])],
     }
 
     

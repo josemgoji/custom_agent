@@ -1,6 +1,7 @@
 # app.py
 
 import streamlit as st
+from langchain_core.messages import SystemMessage, AIMessage, HumanMessage
 import os
 from dotenv import load_dotenv
 from graphs import (
@@ -325,24 +326,32 @@ elif st.session_state["modo"] == "explicacion":
 
 elif st.session_state["modo"] == "libre":
     st.write("Estás en modo libre. Aquí puedes hacer preguntas directamente.")
-    user_input = st.chat_input(
-        "Ecriba su pregunta aquí:",
-    )
-    
+    user_input = st.chat_input("Escriba su pregunta aquí:")
+
     if user_input:
-        # Agrega el mensaje del usuario al historial
+        # Mostrar inmediatamente el mensaje del usuario
         st.session_state.message_history.append({'content': user_input, 'type': 'user'})
-        
-        respuesta = graph_libre.invoke({
-            "messages": user_input,
-        })
-        
-        contenido_respuesta = respuesta["messages"][1].content
-        
-        st.session_state.message_history.append({'content': contenido_respuesta, 'type': 'assistant'})
-        
-        
+
+        # Mostrar el historial hasta ahora (incluye el mensaje del usuario)
         for message in st.session_state.message_history:
             with st.chat_message(message['type']):
                 st.markdown(message['content'])
+
+        # Crear un contenedor vacío para la respuesta del agente
+        response_placeholder = st.empty()
+
+        # Mostrar spinner mientras se genera la respuesta
+        with st.spinner("El agente está pensando..."):
+            respuesta = graph_libre.invoke({
+                "messages": [HumanMessage(content=user_input)],
+            })
+            contenido_respuesta = respuesta["messages"][-1].content
+
+        # Añadir la respuesta al historial
+        st.session_state.message_history.append({'content': contenido_respuesta, 'type': 'assistant'})
+
+        # Actualizar el contenedor con la respuesta del agente
+        with response_placeholder:
+            with st.chat_message("assistant"):
+                st.markdown(contenido_respuesta)
     
