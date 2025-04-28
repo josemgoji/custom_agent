@@ -55,60 +55,53 @@ if "explicacion" not in st.session_state:
 if "messages" not in st.session_state:
     st.session_state["messages"] = []
 if 'message_history' not in st.session_state:
-    st.session_state.message_history = [
-        {'content': "Holi estoy aqui para ayudar", 'type': 'assistant'}
-    ]
+    st.session_state.message_history = []
+if "modo_anterior" not in st.session_state:
+    st.session_state["modo_anterior"] = None
     
 # --- Botón flotante para cambiar de modo ---
 with st.sidebar:
+    if st.session_state.get("modo_detectado", False):
+        st.success(f"Modo activo: {st.session_state['modo'].capitalize()}")
+    
     st.markdown("## Cambiar de Modo")
 
     if st.button("Modo Libre"):
+        st.session_state["modo_anterior"] = st.session_state["modo"]
         st.session_state["modo"] = "libre"
         st.session_state["modo_detectado"] = True
         st.rerun()
 
-    if st.button("Modo Guiado"):
-        st.session_state["modo"] = "guiado"
+    if st.button("Modo Anterior"):
+        st.session_state["modo"] = st.session_state["modo_anterior"]
         st.session_state["modo_detectado"] = True
         st.rerun()
     
 st.title("Agente asitente de estudio de estadística")
 
-graph_modo, graph_feedback, graph_plan, graph_explicacion, graph_libre = build_graphs()
+graph_feedback, graph_plan, graph_explicacion, graph_libre = build_graphs()
 
-# --- Paso 1: Entrada de texto libre ---
-if not st.session_state["user_input"]:
-    st.markdown("### Bienvenido")
-    st.markdown("Por favor, escribe cómo quieres interactuar con el agente.")
-    user_input = st.text_input(
-        "¿Cómo quieres interactuar con el agente? (Ejemplo: 'Quiero que me guíes' o 'Solo respóndeme')"
+# --- Paso 1: Elegir modo de interacción ---
+if not st.session_state["modo_detectado"]:
+    st.markdown("## Bienvenido ✨")
+    st.markdown("""
+    Elige cómo quieres interactuar con el agente de estudio:
+    
+    - **Modo Guiado**: Responde un quiz para evaluar tu nivel y recibir feedback detallado.
+    - **Modo Libre**: Pregunta cualquier cosa de estadística sin seguir una ruta fija.
+    """)
+    
+    modo = st.radio(
+        "Selecciona el modo que prefieras:",
+        ("guiado", "libre"),
+        key="seleccion_modo"
     )
-    if st.button("Enviar"):
-        st.session_state["user_input"] = user_input
-        st.rerun()
-
-# --- Detectar el modo solo una vez ---
-if st.session_state["user_input"] and not st.session_state.get("modo_detectado", False):
-    result = graph_modo.invoke({
-        "user_input": st.session_state["user_input"],
-        "modo": "",
-        "pregunta_idx": 0,
-        "respuestas": [],
-        "feedback": {},
-        "nivel": "",
-        "fortalezas": [],
-        "debilidades": [],
-        "puntaje_promedio": 0,
-        "detalle": [],
-        "preguntas_seleccionadas": []
-    })
-    if "modo" in result:
-        st.session_state["modo"] = result["modo"]
+    
+    if st.button("Confirmar modo"):
+        st.session_state["modo"] = modo
         st.session_state["modo_detectado"] = True
-
-if st.session_state.get("modo_detectado", False):
-    st.success(f"Modo detectado: {st.session_state['modo']}")
+        st.success(f"Modo seleccionado: {modo.capitalize()}")
+        st.rerun()
 
 # --- modo guiado ---
 if st.session_state["modo"] == "guiado":

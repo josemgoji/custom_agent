@@ -139,15 +139,6 @@ def seleccionar_preguntas(nivel: str):
     return seleccionadas
 
 # --- prompts ---
-prompt_clasificar = ChatPromptTemplate.from_messages([
-    ("system",
-    "Clasifica la siguiente intención del usuario SOLO como 'guiado' o 'libre'. "
-    "Si el usuario quiere que lo guíes paso a paso, responde 'guiado'. "
-    "Si solo quiere una respuesta directa, responde 'libre'. "
-    "Intención del usuario: {user_input}\n"
-    "Respuesta:")
-])
-
 prompt_quiz = ChatPromptTemplate.from_messages([
     ("system",
      """Eres un experto en educación. Evalúa las siguientes respuestas del usuario a preguntas de probabilidad y estadística.
@@ -251,24 +242,6 @@ PROMPT_EXPLICACION = ChatPromptTemplate.from_messages([
 llm = ChatOpenAI(model="o4-mini")
 
 # --- nodos ---
-
-## --- nodo clasificar ---
-def nodo_clasificacion_modo(state: State):
-    user_input = state["user_input"]
-    if not user_input:
-            return {"modo": ""}
-        
-    llm_chain = prompt_clasificar | llm
-    respuesta = llm_chain.invoke({"user_input": user_input}).content.strip().lower()
-    
-    if "guiado" in respuesta:
-        modo = "guiado"
-    elif "libre" in respuesta:
-        modo = "libre"
-    else:
-        modo = "libre"
-    return {"modo": modo}
-
 ## --- nodo calificar quiz y feedback ---
 def nodo_generar_feedback(state: State):
     parser = JsonOutputParser()
@@ -416,12 +389,6 @@ Información recuperada:
     
 
 def build_graphs():
-    graph_builder = StateGraph(State)
-    graph_builder.add_node("clasificacion_modo", nodo_clasificacion_modo)
-    graph_builder.set_entry_point("clasificacion_modo")
-    graph_builder.add_edge("clasificacion_modo", END)
-    graph_modo = graph_builder.compile()
-
     graph_builder2 = StateGraph(State)
     graph_builder2.add_node("generar_feedback", nodo_generar_feedback)
     graph_builder2.set_entry_point("generar_feedback")
@@ -452,4 +419,4 @@ def build_graphs():
     graph_libre = graph_builder5.compile()
     
 
-    return graph_modo, graph_feedback , graph_plan , graph_explicacion, graph_libre
+    return graph_feedback , graph_plan , graph_explicacion, graph_libre
