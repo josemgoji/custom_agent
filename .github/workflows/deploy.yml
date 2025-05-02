@@ -35,9 +35,9 @@ jobs:
             echo "→ Instalando dependencias"
             pip install -r requirements.txt
 
-            echo "→ Deteniendo Streamlit si está corriendo"
-            pkill streamlit || true
+            echo "→ Deteniendo instancia de Streamlit en tmux si existe"
+            tmux kill-session -t streamlit_session || true
 
-            echo "→ Ejecutando app"
-            nohup streamlit run src/app.py --server.port=8501 --server.address=0.0.0.0 --server.headless=true > streamlit.log 2>&1 & disown
+            echo "→ Ejecutando app en sesión tmux"
+            tmux new-session -d -s streamlit_session 'source .venv/bin/activate && streamlit run src/app.py --server.port=8501 --server.address=0.0.0.0 --server.headless=true'
           EOF
