@@ -27,7 +27,7 @@ jobs:
             cd ~/custom_agent
 
             echo "→ Activando entorno virtual"
-            source .venv/bin/activate
+            source venv/bin/activate
 
             echo "→ Haciendo pull del último código"
             git pull origin main
