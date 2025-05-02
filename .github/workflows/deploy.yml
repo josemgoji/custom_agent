@@ -39,5 +39,5 @@ jobs:
             pkill streamlit || true
 
             echo "→ Ejecutando app"
-            nohup streamlit run src/app.py --server.port=8501 --server.headless=true > streamlit.log 2>&1 &
+            nohup streamlit run src/app.py
           EOF
