@@ -89,7 +89,7 @@ with st.sidebar:
         st.session_state["modo_detectado"] = True
         st.rerun()
     
-st.title("Agente asitente de estudio de estadística 3")
+st.title("Agente asitente de estudio de estadística")
 
 graph_feedback, graph_plan, graph_explicacion, graph_libre = build_graphs()
 
