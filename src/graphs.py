@@ -20,6 +20,10 @@ from langgraph.graph.message import add_messages
 from typing import Annotated
 import numpy as np
 import random
+from dotenv import load_dotenv
+
+
+load_dotenv()
 
 quiz_preguntas = {
     "basico": [
