@@ -11,3 +11,4 @@ streamlit==1.44.1
 typing_extensions==4.13.2
 langchain_chroma
 pypdf
+duckduckgo-search
