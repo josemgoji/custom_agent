@@ -1,0 +1,43 @@
+name: Deploy Streamlit to EC2
+
+on:
+  push:
+    branches:
+      - main  # o la rama que uses
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Deploy to EC2
+        env:
+          PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          HOSTNAME: ${{ secrets.SSH_HOST }}
+          USER: ${{ secrets.SSH_USER }}
+
+        run: |
+          echo "$PRIVATE_KEY" > key.pem
+          chmod 600 key.pem
+
+          ssh -o StrictHostKeyChecking=no -i key.pem ${USER}@${HOSTNAME} << 'EOF'
+            cd ~/custom_agent
+
+            echo "→ Activando entorno virtual"
+            source .venv/bin/activate
+
+            echo "→ Haciendo pull del último código"
+            git pull origin main
+
+            echo "→ Instalando dependencias"
+            pip install -r requirements.txt
+
+            echo "→ Deteniendo Streamlit si está corriendo"
+            pkill streamlit || true
+
+            echo "→ Ejecutando app"
+            nohup streamlit run src/app.py --server.port=8501 --server.headless=true > streamlit.log 2>&1 &
+          EOF

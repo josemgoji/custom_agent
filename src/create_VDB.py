@@ -1,9 +1,12 @@
 import os
+from dotenv import load_dotenv
 from langchain_chroma import Chroma 
 from langchain_openai import OpenAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import PyPDFLoader
 from pathlib import Path
+
+load_dotenv()
 
 data_folder = Path('./data')
 docs = []
