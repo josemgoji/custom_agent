@@ -2,6 +2,7 @@
 
 from math import e
 import streamlit as st
+from pathlib import Path
 from langchain_core.messages import SystemMessage, AIMessage, HumanMessage
 import os
 from dotenv import load_dotenv
@@ -12,8 +13,11 @@ from graphs import (
 )
 
 # --- Cargar variables de entorno y API Key ---
-load_dotenv()
-os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
+# load_dotenv()
+# os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
+
+env_path = Path(__file__).parent.parent / '.env'
+load_dotenv(dotenv_path=env_path)
 
 # --- Inicialización de session_state ---
 if "user_input" not in st.session_state:
