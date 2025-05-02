@@ -1,5 +1,6 @@
 # app.py
 
+from math import e
 import streamlit as st
 from langchain_core.messages import SystemMessage, AIMessage, HumanMessage
 import os
@@ -66,12 +67,18 @@ with st.sidebar:
         st.success(f"Modo activo: {st.session_state['modo'].capitalize()}")
     
     st.markdown("## Cambiar de Modo")
-
-    if st.button("Modo Libre"):
-        st.session_state["modo_anterior"] = st.session_state["modo"]
-        st.session_state["modo"] = "libre"
-        st.session_state["modo_detectado"] = True
-        st.rerun()
+    if st.session_state["modo"] == "libre":
+        if st.button("Modo Guiado"):
+            st.session_state["modo_anterior"] = st.session_state["modo"]
+            st.session_state["modo"] = "guiado"
+            st.session_state["modo_detectado"] = True
+            st.rerun()
+    else:    
+        if st.button("Modo Libre"):
+            st.session_state["modo_anterior"] = st.session_state["modo"]
+            st.session_state["modo"] = "libre"
+            st.session_state["modo_detectado"] = True
+            st.rerun()
 
     if st.button("Modo Anterior"):
         st.session_state["modo"] = st.session_state["modo_anterior"]
