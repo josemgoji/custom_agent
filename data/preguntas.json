@@ -1,0 +1,95 @@
+{
+  "basico": [
+    {
+      "tema": "Variables aleatorias",
+      "pregunta": "¿Qué es una variable aleatoria?"
+    },
+    {
+      "tema": "Variables aleatorias",
+      "pregunta": "¿Cuál es la diferencia entre una variable aleatoria discreta y continua?"
+    },
+    { "tema": "Probabilidad", "pregunta": "¿Qué es la probabilidad clásica?" },
+    {
+      "tema": "Probabilidad",
+      "pregunta": "¿Qué es la probabilidad frecuentista?"
+    },
+    {
+      "tema": "Distribuciones simples",
+      "pregunta": "¿Qué es una distribución uniforme?"
+    },
+    {
+      "tema": "Distribuciones simples",
+      "pregunta": "¿Qué caracteriza a una distribución de probabilidad discreta?"
+    },
+    { "tema": "Eventos", "pregunta": "¿Qué es un evento en probabilidad?" },
+    {
+      "tema": "Eventos",
+      "pregunta": "¿Qué significa que dos eventos sean mutuamente excluyentes?"
+    }
+  ],
+  "intermedio": [
+    {
+      "tema": "Desviación estándar",
+      "pregunta": "¿Qué es la desviación estándar?"
+    },
+    {
+      "tema": "Desviación estándar",
+      "pregunta": "¿Cómo se interpreta una desviación estándar alta o baja?"
+    },
+    { "tema": "Medidas de dispersión", "pregunta": "¿Qué es la varianza?" },
+    {
+      "tema": "Medidas de dispersión",
+      "pregunta": "¿Cómo se relacionan la varianza y la desviación estándar?"
+    },
+    {
+      "tema": "Estadística descriptiva",
+      "pregunta": "¿Qué es la media aritmética?"
+    },
+    {
+      "tema": "Estadística descriptiva",
+      "pregunta": "¿Qué diferencia hay entre la media y la mediana?"
+    },
+    {
+      "tema": "Distribuciones",
+      "pregunta": "¿Qué es una distribución normal?"
+    },
+    {
+      "tema": "Distribuciones",
+      "pregunta": "¿Qué es una distribución sesgada y cómo se identifica?"
+    }
+  ],
+  "avanzado": [
+    {
+      "tema": "Probabilidad conjunta",
+      "pregunta": "¿Cómo se calcula la probabilidad conjunta de dos eventos independientes?"
+    },
+    {
+      "tema": "Probabilidad conjunta",
+      "pregunta": "¿Qué diferencia hay entre probabilidad conjunta y probabilidad condicional?"
+    },
+    {
+      "tema": "Teorema de Bayes",
+      "pregunta": "Explica el teorema de Bayes con un ejemplo."
+    },
+    {
+      "tema": "Teorema de Bayes",
+      "pregunta": "¿Cómo se aplica el teorema de Bayes en problemas médicos?"
+    },
+    {
+      "tema": "Distribuciones avanzadas",
+      "pregunta": "¿Qué es una distribución binomial?"
+    },
+    {
+      "tema": "Distribuciones avanzadas",
+      "pregunta": "¿Qué es una distribución de Poisson y en qué casos se utiliza?"
+    },
+    {
+      "tema": "Inferencia",
+      "pregunta": "¿Qué es una estimación puntual en inferencia estadística?"
+    },
+    {
+      "tema": "Inferencia",
+      "pregunta": "¿Qué diferencia hay entre una estimación puntual y un intervalo de confianza?"
+    }
+  ]
+}

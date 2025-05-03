@@ -1,59 +1,25 @@
-from langgraph.graph import StateGraph, END , START
-from typing_extensions import TypedDict
-from typing import List, Dict, Any
-from langchain_openai import ChatOpenAI
-from langchain.prompts import ChatPromptTemplate
-from langchain_core.output_parsers.json import JsonOutputParser
-from langchain_chroma import Chroma 
-from langchain_openai import OpenAIEmbeddings
 from pathlib import Path
-from langchain.tools import tool
-from langchain_community.tools import DuckDuckGoSearchRun
-from langgraph.prebuilt import tools_condition
-from langchain_core.messages import SystemMessage
-from langgraph.prebuilt.tool_node import ToolNode
-from langgraph.graph.message import AnyMessage
-from langgraph.graph.message import add_messages
-from typing import Annotated
-import numpy as np
-import random
+from typing import Annotated, Any, Dict, List
+from typing_extensions import TypedDict
+
 from dotenv import load_dotenv
 
+from langchain_chroma import Chroma
+from langchain_core.messages import SystemMessage
+from langchain_core.output_parsers.json import JsonOutputParser
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+from langchain_community.tools import DuckDuckGoSearchRun
+
+from langgraph.graph import END, START, StateGraph
+from langgraph.graph.message import AnyMessage, add_messages
+from langgraph.prebuilt import tools_condition
+from langgraph.prebuilt.tool_node import ToolNode
+
+from tools import informe_estadistico_tool
+from utils import crear_prompt
 
 load_dotenv()
 
-quiz_preguntas = {
-    "basico": [
-        {"tema": "Variables aleatorias", "pregunta": "¿Qué es una variable aleatoria?"},
-        {"tema": "Variables aleatorias", "pregunta": "¿Cuál es la diferencia entre una variable aleatoria discreta y continua?"},
-        {"tema": "Probabilidad", "pregunta": "¿Qué es la probabilidad clásica?"},
-        {"tema": "Probabilidad", "pregunta": "¿Qué es la probabilidad frecuentista?"},
-        {"tema": "Distribuciones simples", "pregunta": "¿Qué es una distribución uniforme?"},
-        {"tema": "Distribuciones simples", "pregunta": "¿Qué caracteriza a una distribución de probabilidad discreta?"},
-        {"tema": "Eventos", "pregunta": "¿Qué es un evento en probabilidad?"},
-        {"tema": "Eventos", "pregunta": "¿Qué significa que dos eventos sean mutuamente excluyentes?"}
-    ],
-    "intermedio": [
-        {"tema": "Desviación estándar", "pregunta": "¿Qué es la desviación estándar?"},
-        {"tema": "Desviación estándar", "pregunta": "¿Cómo se interpreta una desviación estándar alta o baja?"},
-        {"tema": "Medidas de dispersión", "pregunta": "¿Qué es la varianza?"},
-        {"tema": "Medidas de dispersión", "pregunta": "¿Cómo se relacionan la varianza y la desviación estándar?"},
-        {"tema": "Estadística descriptiva", "pregunta": "¿Qué es la media aritmética?"},
-        {"tema": "Estadística descriptiva", "pregunta": "¿Qué diferencia hay entre la media y la mediana?"},
-        {"tema": "Distribuciones", "pregunta": "¿Qué es una distribución normal?"},
-        {"tema": "Distribuciones", "pregunta": "¿Qué es una distribución sesgada y cómo se identifica?"}
-    ],
-    "avanzado": [
-        {"tema": "Probabilidad conjunta", "pregunta": "¿Cómo se calcula la probabilidad conjunta de dos eventos independientes?"},
-        {"tema": "Probabilidad conjunta", "pregunta": "¿Qué diferencia hay entre probabilidad conjunta y probabilidad condicional?"},
-        {"tema": "Teorema de Bayes", "pregunta": "Explica el teorema de Bayes con un ejemplo."},
-        {"tema": "Teorema de Bayes", "pregunta": "¿Cómo se aplica el teorema de Bayes en problemas médicos?"},
-        {"tema": "Distribuciones avanzadas", "pregunta": "¿Qué es una distribución binomial?"},
-        {"tema": "Distribuciones avanzadas", "pregunta": "¿Qué es una distribución de Poisson y en qué casos se utiliza?"},
-        {"tema": "Inferencia", "pregunta": "¿Qué es una estimación puntual en inferencia estadística?"},
-        {"tema": "Inferencia", "pregunta": "¿Qué diferencia hay entre una estimación puntual y un intervalo de confianza?"}
-    ]
-}
 # --- Definición del estado ---
 class State(TypedDict):
     user_input: str
@@ -78,7 +44,6 @@ class State(TypedDict):
 persist_path = Path('./chroma')
 vectorstore = Chroma(persist_directory=str(persist_path), embedding_function=OpenAIEmbeddings())
 
-
 retriever = vectorstore.as_retriever(
     search_type="similarity",
     search_kwargs={"k": 3}
@@ -86,158 +51,16 @@ retriever = vectorstore.as_retriever(
 llm = ChatOpenAI(model="o4-mini")
 
 # --- difinir tools ----
-
-@tool
-def informe_estadistico_tool(numbers: str) -> str:
-    """Retorna un informe estadistico de una lista de numeros sparados por coma. El informe estadistico obtiene la siguiente información de la lista: count, mean, standard deviation, min, max, quartile 1, quartile 2 and quartile 3"""
-    try:
-        nums = [float(x.strip()) for x in numbers.split(",") if x.strip()]
-        if not nums:
-            return "No valid numbers provided."
-
-        nums_array = np.array(nums)
-
-        count = len(nums_array)
-        mean = np.mean(nums_array)
-        std = np.std(nums_array)
-        min_val = np.min(nums_array)
-        max_val = np.max(nums_array)
-        q1 = np.percentile(nums_array, 25)
-        q2 = np.percentile(nums_array, 50)
-        q3 = np.percentile(nums_array, 75)
-
-        result = (
-            f"Informe estadistico de la lista:\n"
-            f"- Count: {count}\n"
-            f"- Mean: {mean:.4f}\n"
-            f"- Standard Deviation: {std:.4f}\n"
-            f"- Min: {min_val}\n"
-            f"- Max: {max_val}\n"
-            f"- Q1 (25th percentile): {q1}\n"
-            f"- Q2 (median): {q2}\n"
-            f"- Q3 (75th percentile): {q3}"
-        )
-
-        return result
-
-    except Exception as e:
-        return f"Error processing numbers: {str(e)}"
-    
-    
 search_tool = DuckDuckGoSearchRun()
-
 
 tools = [search_tool, informe_estadistico_tool]
 
-# --- funciones ---
-def seleccionar_preguntas(nivel: str):
-    preguntas = quiz_preguntas[nivel]
-    temas = list(set([p["tema"] for p in preguntas]))
-    seleccionadas = []
-    for tema in temas:
-        preguntas_tema = [p for p in preguntas if p["tema"] == tema]
-        seleccionadas.append(random.choice(preguntas_tema))
-    return seleccionadas
-
 # --- prompts ---
-prompt_quiz = ChatPromptTemplate.from_messages([
-    ("system",
-     """Eres un experto en educación. Evalúa las siguientes respuestas del usuario a preguntas de probabilidad y estadística.
-Para cada respuesta, califica de 0 a 5 (donde 0 es incorrecta y 5 es perfecta), explica brevemente la calificación.
+prompts_path = Path('./prompts')
 
-Devuelve la respuesta SOLO en formato JSON con la siguiente estructura:
-{{
-  "resultados": [puntaje1, puntaje2, ...],
-  "detalle": [
-    {{
-      "pregunta": "...",
-      "respuesta": "...",
-      "tema": "...",
-      "puntaje": 0-5,
-      "feedback": "..."
-    }},
-    ...
-  ]
-}}
-
-Respuestas del usuario:
-{respuestas_usuario}
-""")
-])
-
-prompt_plan = ChatPromptTemplate.from_template(
-    """
-Eres un tutor experto en estadística y probabilidad.
-El estudiante tiene el nivel: {nivel}.
-Sus debilidades principales son: {debilidades}.
-
-Crea un plan de estudio personalizado y devuélvelo SOLO en formato JSON con EXACTAMENTE esta estructura:
-{{
-    "plan_estudio": {{
-        "tema1": {{
-            "nombre": "Nombre del Tema 1",
-            "subtemas": [
-                "Subtema 1.1",
-                "Subtema 1.2",
-                "Subtema 1.3",
-                "Subtema 1.4"
-            ]
-        }},
-        "tema2": {{
-            "nombre": "Nombre del Tema 2",
-            "subtemas": [
-                "Subtema 2.1",
-                "Subtema 2.2",
-                "Subtema 2.3",
-                "Subtema 2.4"
-            ]
-        }},
-        "tema3": {{
-            "nombre": "Nombre del Tema 3",
-            "subtemas": [
-                "Subtema 3.1",
-                "Subtema 3.2",
-                "Subtema 3.3",
-                "Subtema 3.4"
-            ]
-        }}
-    }}
-}}
-
-Los temas deben enfocarse en las debilidades mencionadas.
-Cada tema DEBE tener exactamente 4 subtemas.
-IMPORTANTE: Devuelve SOLO el JSON, sin texto adicional.
-"""
-)
-
-PROMPT_EXPLICACION = ChatPromptTemplate.from_messages([
-    ("system", """Eres un tutor experto en estadística y probabilidad.
-    Tu tarea es explicar conceptos de manera clara y estructurada usando formato markdown.
-
-    Instrucciones importantes:
-    - Usa el contexto proporcionado como referencia y validación
-    - Complementa la explicación con tu conocimiento general del tema
-    - Asegúrate que la información sea precisa y actualizada
-    - Adapta el nivel de complejidad según el estudiante
-    - Incluye definiciones, fórmulas y ejemplos prácticos"""),
-
-    ("user", """Para el tema "{tema_actual}", revisa el siguiente contexto como referencia:
-    {contexto}
-
-    Genera una explicación completa que:
-    1. Valide y use la información relevante del contexto
-    2. Complemente con conocimiento adicional importante
-    3. Cubra los siguientes subtemas:
-    {subtemas_str}
-
-    La explicación debe incluir:
-    - Definiciones claras y completas
-    - Fórmulas relevantes con explicación
-    - Ejemplos prácticos del mundo real
-    - Formato markdown bien estructurado
-    - Analogías para facilitar comprensión
-    """)
-])
+PROMPT_QUIZ = crear_prompt(prompts_path / 'prompt_quiz.txt')
+PROMPT_PLAN = crear_prompt(prompts_path / 'prompt_plan.txt')
+PROMPT_EXPLICACION = crear_prompt(prompts_path / 'prompt_exp.txt')
 
 # --- definir llm ---
 llm = ChatOpenAI(model="o4-mini")
@@ -246,7 +69,7 @@ llm = ChatOpenAI(model="o4-mini")
 ## --- nodo calificar quiz y feedback ---
 def nodo_generar_feedback(state: State):
     parser = JsonOutputParser()
-    chain_quiz = prompt_quiz | llm | parser
+    chain_quiz = PROMPT_QUIZ | llm | parser
     
     respuestas = state.get("respuestas", [])
     preguntas_seleccionadas = state.get("preguntas_seleccionadas", [])
@@ -258,7 +81,7 @@ def nodo_generar_feedback(state: State):
                 "respuesta": respuestas[idx],
                 "tema": pregunta["tema"]
             })
-    prompt_str = prompt_quiz.format(respuestas_usuario=str(respuestas_usuario))
+    prompt_str = PROMPT_QUIZ.format(respuestas_usuario=str(respuestas_usuario))
     data = chain_quiz.invoke(prompt_str)
 
     resultados = data.get("resultados", [])
@@ -282,7 +105,7 @@ def nodo_plan_estudio(state: State):
     debilidades_str = ", ".join(debilidades)
 
     parser = JsonOutputParser()
-    chain = prompt_plan | llm | parser
+    chain = PROMPT_PLAN | llm | parser
 
     # Corregido: usar [] para acceder a los elementos
     respuesta = chain.invoke({

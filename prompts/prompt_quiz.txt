@@ -1,0 +1,24 @@
+[
+    ("system",
+     """Eres un experto en educación. Evalúa las siguientes respuestas del usuario a preguntas de probabilidad y estadística.
+Para cada respuesta, califica de 0 a 5 (donde 0 es incorrecta y 5 es perfecta), explica brevemente la calificación.
+
+Devuelve la respuesta SOLO en formato JSON con la siguiente estructura:
+{{
+  "resultados": [puntaje1, puntaje2, ...],
+  "detalle": [
+    {{
+      "pregunta": "...",
+      "respuesta": "...",
+      "tema": "...",
+      "puntaje": 0-5,
+      "feedback": "..."
+    }},
+    ...
+  ]
+}}
+
+Respuestas del usuario:
+{respuestas_usuario}
+""")
+])

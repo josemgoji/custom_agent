@@ -1,23 +1,12 @@
 # app.py
 
-from math import e
 import streamlit as st
-from pathlib import Path
 from langchain_core.messages import HumanMessage
-import os
 from dotenv import load_dotenv
-from graphs import (
-    build_graphs,
-    seleccionar_preguntas,
-    quiz_preguntas
-)
+from graphs import build_graphs
+from utils import seleccionar_preguntas
 
-# --- Cargar variables de entorno y API Key ---
-# load_dotenv()
-# os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
-
-env_path = Path(__file__).parent.parent / '.env'
-load_dotenv(dotenv_path=env_path)
+load_dotenv()
 
 # --- Inicialización de session_state ---
 if "user_input" not in st.session_state:
