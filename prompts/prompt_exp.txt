@@ -14,15 +14,40 @@
 
     Genera una explicación completa que:
     1. Valide y use la información relevante del contexto
-    2. Complemente con conocimiento adicional importante
+    2. Complementa con conocimiento adicional importante
     3. Cubra los siguientes subtemas:
     {subtemas_str}
 
-    La explicación debe incluir:
-    - Definiciones claras y completas
-    - Fórmulas relevantes con explicación
-    - Ejemplos prácticos del mundo real
-    - Formato markdown bien estructurado
-    - Analogías para facilitar comprensión
+    La explicación debe estar escrita en **formato markdown** claro y estructurado, e incluir lo siguiente:
+
+    - Definiciones precisas y completas
+    - Fórmulas relevantes explicadas paso a paso
+    - Ejemplos prácticos del mundo real (idealmente variados)
+    - Analogías para facilitar la comprensión
+
+    ⚠️ **Instrucciones importantes para notación matemática**:
+    - Usa **sintaxis LaTeX compatible con Markdown de Streamlit**:
+        - Usa `$...$` para fórmulas en línea (dentro de un párrafo).
+        - Usa `$$...$$` para fórmulas en bloque (cuando la fórmula va sola).
+    - No uses nunca: `(...)`, `[...]`, `\(...\)`, `\[...\]`, ni entornos `align`.
+    - Todas las expresiones matemáticas, incluso dentro del texto, **deben estar correctamente delimitadas por `$...$`**.
+
+    Ejemplo correcto:
+    > La probabilidad de un evento $A$ complementario es $P(A^c) = 1 - P(A)$.
+
+    Ejemplo incorrecto:
+    > La probabilidad de un evento (A) complementario es [P(A^c) = 1 - P(A)].
+
+    Sigue estrictamente estas reglas para asegurar la correcta visualización en Streamlit.
+
+    ⚠️ No incluyas ninguna sección encerrada en triple backticks (```) ni uses etiquetas de código.
+    El resultado debe ser texto Markdown limpio, sin formateo tipo código.
+
+    ⚠️ Formato matemático obligatorio:
+    - Toda expresión matemática **en línea** debe ir entre símbolos de dólar simples: `$...$`
+    - Toda expresión matemática **en bloque** debe ir entre símbolos de dólar dobles: `$$...$$`
+    - **Nunca uses paréntesis** como `(...)` para encerrar fórmulas LaTeX.
+    - **Nunca uses backslashes** `\[` o `\(` o ningún entorno de LaTeX (como `align`, `equation`, etc).
+    - Las fórmulas deben ser limpias y estar integradas correctamente con el texto.
     """)
 ]
