@@ -1,10 +1,12 @@
 # app.py
 
 import streamlit as st
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import HumanMessage, AIMessage
 from dotenv import load_dotenv
 from graphs import build_graphs
 from utils import seleccionar_preguntas, mostrar_feedback, corregir_latex_llm
+
+st.set_page_config(page_title='Agente Estadistica', page_icon='📊')
 
 load_dotenv()
 
@@ -80,13 +82,12 @@ with st.sidebar:
             st.rerun()
         else:
             st.warning("No hay un modo anterior para volver.")
-    
-st.title("Agente asitente de estudio de estadística custom")
 
 graph_feedback, graph_plan, graph_explicacion, graph_libre = build_graphs()
 
 # --- Paso 1: Elegir modo de interacción ---
 if not st.session_state["modo_detectado"]:
+    st.title("Agente asitente de estudio de estadística custom")
     st.markdown("## Bienvenido ✨")
     st.markdown("""
     Elige cómo quieres interactuar con el agente de estudio:
@@ -109,6 +110,7 @@ if not st.session_state["modo_detectado"]:
 
 # --- modo guiado ---
 if st.session_state["modo"] == "guiado":
+    st.title("Quiz cononocimientos previos")
     # --- realizar el quiz ---
     # crear las preguntas
     if not st.session_state["preguntas_seleccionadas"]:
@@ -331,29 +333,32 @@ elif st.session_state["modo"] == "libre":
     user_input = st.chat_input("Escriba su pregunta aquí:")
 
     if user_input:
-        # Mostrar inmediatamente el mensaje del usuario
         st.session_state.message_history.append({'content': user_input, 'type': 'user'})
 
-        # Mostrar el historial hasta ahora (incluye el mensaje del usuario)
+        # Mostrar el historial hasta ahora
         for message in st.session_state.message_history:
             with st.chat_message(message['type']):
                 st.markdown(message['content'])
 
-        # Crear un contenedor vacío para la respuesta del agente
         response_placeholder = st.empty()
 
-        # Mostrar spinner mientras se genera la respuesta
         with st.spinner("El agente está pensando..."):
+            # Construir el historial de mensajes para el asistente
+            messages = []
+            for message in st.session_state.message_history:
+                if message['type'] == 'user':
+                    messages.append(HumanMessage(content=message['content']))
+                else:
+                    messages.append(AIMessage(content=message['content']))
+
             respuesta = graph_libre.invoke({
-                "messages": [HumanMessage(content=user_input)],
+                "messages": messages,
             })
             contenido_respuesta = respuesta["messages"][-1].content
 
-        # Añadir la respuesta al historial
         st.session_state.message_history.append({'content': contenido_respuesta, 'type': 'assistant'})
 
-        # Actualizar el contenedor con la respuesta del agente
         with response_placeholder:
             with st.chat_message("assistant"):
                 st.markdown(contenido_respuesta)
-    
+        

@@ -5,7 +5,7 @@ from typing_extensions import TypedDict
 from dotenv import load_dotenv
 
 from langchain_chroma import Chroma
-from langchain_core.messages import SystemMessage
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 from langchain_core.output_parsers.json import JsonOutputParser
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_community.tools import DuckDuckGoSearchRun
@@ -81,8 +81,9 @@ def nodo_generar_feedback(state: State):
                 "respuesta": respuestas[idx],
                 "tema": pregunta["tema"]
             })
-    prompt_str = PROMPT_QUIZ.format(respuestas_usuario=str(respuestas_usuario))
-    data = chain_quiz.invoke(prompt_str)
+    data = chain_quiz.invoke({
+        "respuestas_usuario": str(respuestas_usuario)
+    })
 
     resultados = data.get("resultados", [])
     detalle = data.get("detalle", [])
@@ -107,7 +108,6 @@ def nodo_plan_estudio(state: State):
     parser = JsonOutputParser()
     chain = PROMPT_PLAN | llm | parser
 
-    # Corregido: usar [] para acceder a los elementos
     respuesta = chain.invoke({
         "nivel": state["nivel"],
         "debilidades": debilidades_str
@@ -146,7 +146,7 @@ def recuperar_contexto(state: State) -> State:
     """
 
     # Obtener documentos relevantes
-    documentos = retriever.get_relevant_documents(query)
+    documentos = retriever.invoke(query)
     contexto = "\n\n".join([doc.page_content for doc in documentos])
 
     return {**state, "contexto_recuperado": contexto}
@@ -162,13 +162,12 @@ def generar_explicacion(state: State) -> State:
     subtemas_str = "\n".join([f"- {s}" for s in subtemas])
 
     # Generar explicación usando el LLM
-    mensages = PROMPT_EXPLICACION.format_messages(
-        contexto=contexto,
-        tema_actual=tema_actual,
-        subtemas_str=subtemas_str
-    )
-
-    explicacion = llm.invoke(mensages).content
+    chain_explicacion = PROMPT_EXPLICACION | llm
+    explicacion = chain_explicacion.invoke({
+        "contexto": contexto,
+        "tema_actual": tema_actual,
+        "subtemas_str": subtemas_str
+    }).content
 
     return {**state, "explicacion": explicacion}
 
@@ -176,18 +175,18 @@ def generar_explicacion(state: State) -> State:
 ## --- nodo preguntas libres ---
 
 def assistant(state: State):
-    last_message = state["messages"][-1]
     chat_with_tools = llm.bind_tools(tools)
-    query = last_message.content
-    print(f"Query recibida: {query}")
-    
+    messages = state["messages"]
+
+    # Toma los últimos N mensajes para el contexto del retriever
+    N = 3
+    recent_messages = messages[-N:]
+    query = " ".join(m.content for m in recent_messages if hasattr(m, "content"))
 
     docs = retriever.invoke(query)
-    print(f"Documentos recuperados: {len(docs)}")
 
     if docs:
         context = "\n\n".join(doc.page_content for doc in docs)
-        print(f"Contexto recuperado (primeros 300 chars): {context[:300]}")
         system_message = SystemMessage(content=f"""
 Eres un asistente inteligente.
 
@@ -197,17 +196,17 @@ Si no es suficiente, usa tu conocimiento general.
 Información recuperada:
 ---
 {context}
----
-""")
-        messages = [system_message] +  state["messages"]
-    else:
-        messages = state["messages"]
+---""")
+        messages = [system_message] + messages
 
+    # Invocar el modelo
     respuesta = chat_with_tools.invoke(messages)
-    print(f"Respuesta generada: {respuesta.content}")
+
+    # Agregar la respuesta al historial
+    updated_messages = state["messages"] + [respuesta]
 
     return {
-        "messages": [chat_with_tools.invoke(state["messages"])],
+        "messages": updated_messages,
     }
 
     
