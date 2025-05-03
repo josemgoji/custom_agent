@@ -309,7 +309,7 @@ elif st.session_state["modo"] == "explicacion":
                 st.rerun()
     else:
         st.write("---")
-        st.write("felicidades has terminado el plan de estudio, hagamos nuevamente el examen para reforzar los ocnocimientos")
+        st.write("felicidades has terminado el plan de estudio, hagamos nuevamente el examen para reforzar los conocimientos")
         
         if st.button("Continuar", key="btn_continuar"):
             st.session_state['modo'] = "guiado"
