@@ -5,7 +5,7 @@ from typing_extensions import TypedDict
 from dotenv import load_dotenv
 
 from langchain_chroma import Chroma
-from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+from langchain_core.messages import SystemMessage
 from langchain_core.output_parsers.json import JsonOutputParser
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_community.tools import DuckDuckGoSearchRun
@@ -56,11 +56,12 @@ search_tool = DuckDuckGoSearchRun()
 tools = [search_tool, informe_estadistico_tool]
 
 # --- prompts ---
-prompts_path = Path('./prompts')
+BASE_DIR = Path(__file__).resolve().parent.parent
+prompts_path = BASE_DIR/'prompts'
 
-PROMPT_QUIZ = crear_prompt(prompts_path / 'prompt_quiz.txt')
-PROMPT_PLAN = crear_prompt(prompts_path / 'prompt_plan.txt')
-PROMPT_EXPLICACION = crear_prompt(prompts_path / 'prompt_exp.txt')
+PROMPT_QUIZ = crear_prompt(prompts_path/'prompt_quiz.txt')
+PROMPT_PLAN = crear_prompt(prompts_path/'prompt_plan.txt')
+PROMPT_EXPLICACION = crear_prompt(prompts_path/'prompt_exp.txt')
 
 # --- definir llm ---
 llm = ChatOpenAI(model="o4-mini")

@@ -6,8 +6,9 @@ from langchain_community.document_loaders import PyPDFLoader
 from pathlib import Path
 
 load_dotenv()
+BASE_DIR = Path(__file__).resolve().parent.parent
 
-data_folder = Path('./data')
+data_folder = BASE_DIR/'data' 
 docs = []
 
 # Iterar solo sobre archivos PDF en la carpeta

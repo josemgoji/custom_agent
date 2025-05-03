@@ -3,13 +3,11 @@ from pathlib import Path
 import streamlit as st
 import re
 import pandas as pd
-from langchain.schema import HumanMessage, AIMessage
-from langchain.prompts import PromptTemplate
-from langchain_openai import ChatOpenAI
 
 # --- seleccionar preguntas ---
-df_path = Path('./data/preguntas_estadistica_niveles.csv')
-df = pd.read_csv(df_path)
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+df = pd.read_csv(BASE_DIR/'data/preguntas_estadistica_niveles.csv')
 
 def seleccionar_preguntas(nivel: str):
     df_filtrado = df[df["nivel"] == nivel.lower()]
