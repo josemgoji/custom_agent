@@ -4,7 +4,7 @@ import streamlit as st
 from langchain_core.messages import HumanMessage
 from dotenv import load_dotenv
 from graphs import build_graphs
-from utils import seleccionar_preguntas
+from utils import seleccionar_preguntas, mostrar_feedback, corregir_latex_llm
 
 load_dotenv()
 
@@ -74,9 +74,12 @@ with st.sidebar:
             st.rerun()
 
     if st.button("Modo Anterior"):
-        st.session_state["modo"] = st.session_state["modo_anterior"]
-        st.session_state["modo_detectado"] = True
-        st.rerun()
+        if st.session_state["modo_anterior"] is not None:
+            st.session_state["modo"] = st.session_state["modo_anterior"]
+            st.session_state["modo_detectado"] = True
+            st.rerun()
+        else:
+            st.warning("No hay un modo anterior para volver.")
     
 st.title("Agente asitente de estudio de estadística custom")
 
@@ -133,19 +136,20 @@ if st.session_state["modo"] == "guiado":
     # cuando termina de responder las preguntas
     if idx >= len(preguntas_seleccionadas):
         if not st.session_state.get("feedback", {}):
-            result = graph_feedback.invoke({
-                "user_input": st.session_state["user_input"],
-                "modo": st.session_state["modo"],
-                "pregunta_idx": len(preguntas_seleccionadas),
-                "respuestas": st.session_state["respuestas"],
-                "feedback": {},
-                "nivel": st.session_state["nivel"],
-                "fortalezas": [],
-                "debilidades": [],
-                "puntaje_promedio": 0,
-                "detalle": [],
-                "preguntas_seleccionadas": st.session_state["preguntas_seleccionadas"]
-            })
+            with st.spinner("🕒 Calificando el quiz"):
+                result = graph_feedback.invoke({
+                    "user_input": st.session_state["user_input"],
+                    "modo": st.session_state["modo"],
+                    "pregunta_idx": len(preguntas_seleccionadas),
+                    "respuestas": st.session_state["respuestas"],
+                    "feedback": {},
+                    "nivel": st.session_state["nivel"],
+                    "fortalezas": [],
+                    "debilidades": [],
+                    "puntaje_promedio": 0,
+                    "detalle": [],
+                    "preguntas_seleccionadas": st.session_state["preguntas_seleccionadas"]
+                })
             st.session_state["feedback"] = result.get("feedback", {})
             st.session_state["detalle"] = result.get("detalle", [])
             total_puntajes = len(st.session_state["detalle"])
@@ -160,6 +164,9 @@ if st.session_state["modo"] == "guiado":
         promedio = st.session_state["puntaje_promedio"]
         # Clasificar el resultado y actualizar el estado del quiz
         if promedio >= 3:
+            
+            mostrar_feedback()
+            
             if st.session_state["nivel"] == "basico":
                 st.success(f"¡Felicidades! Has aprobado el nivel básico con un promedio de {promedio}.")
                 st.session_state["nivel"] = "intermedio"
@@ -168,7 +175,10 @@ if st.session_state["modo"] == "guiado":
                 st.session_state["feedback"] = {}
                 st.session_state["detalle"] = []
                 st.session_state["preguntas_seleccionadas"] = seleccionar_preguntas("intermedio")
-                st.rerun()
+                
+                if st.button("Continuar", key="btn_next_lv"):
+                    st.rerun()
+                
             elif st.session_state["nivel"] == "intermedio":
                 st.success(f"¡Felicidades! Has aprobado el nivel intermedio con un promedio de {promedio}.")
                 st.session_state["nivel"] = "avanzado"
@@ -177,7 +187,10 @@ if st.session_state["modo"] == "guiado":
                 st.session_state["feedback"] = {}
                 st.session_state["detalle"] = []
                 st.session_state["preguntas_seleccionadas"] = seleccionar_preguntas("avanzado")
-                st.rerun()
+                
+                if st.button("Continuar", key="btn_next_lv"):
+                    st.rerun()
+                
             else:
                 st.success(f"¡Felicidades! Has aprobado todos los niveles con un promedio de {promedio}!")
                 st.session_state["estado_quiz"] = "finalizado"
@@ -215,34 +228,15 @@ if st.session_state["modo"] == "guiado":
                     st.session_state["modo"] = "estudio"
                     st.session_state["estado_quiz"] = "en_curso"
                     st.rerun()
-            st.markdown("### Feedback del examen")
-            st.info(f"**Puntaje promedio del nivel:** {st.session_state['puntaje_promedio']}")
-            st.markdown("### Fortalezas")
-            st.write(st.session_state["fortalezas"])
-            st.markdown("### Debilidades")
-            st.write(st.session_state["debilidades"])
-            st.markdown(f"### Detalle por pregunta nivel: {st.session_state['nivel']}")
+                    
+            mostrar_feedback()        
             
-            for d in st.session_state["detalle"]:
-                st.markdown(f"**Pregunta:** {d['pregunta']}")
-                st.markdown(f"**Respuesta:** {d['respuesta']}")
-                st.markdown(f"**Tema:** {d['tema']}")
-                st.markdown(f"**Puntaje:** {d['puntaje']}")
-                st.markdown(f"**Feedback:** {d['feedback']}")
-                st.markdown("---")
-
 # -- modo de explicacion --
 elif st.session_state["modo"] == "estudio":
-    st.success("¡Bienvenido al estudio!")
     st.title("Plan de Estudio")
 
-    # Inicializar variables de estado para el plan
-    # if "plan_aprobado" not in st.session_state:
-    #     st.session_state["plan_aprobado"] = None
     if "plan_actual" not in st.session_state:
         st.session_state["plan_actual"] = None
-    # if "sugerencia_plan" not in st.session_state:
-    #     st.session_state["sugerencia_plan"] = ""
 
     # Si no hay un plan generado, generarlo
     if not st.session_state["plan_actual"]:
@@ -262,7 +256,11 @@ elif st.session_state["modo"] == "estudio":
         st.rerun()            
 
     # Mostrar el plan actual
-    st.write(st.session_state["plan_actual"])
+    subtemas = st.session_state["plan_actual"].get("subtemas", {})
+    for tema, lista_subtemas in subtemas.items():
+        st.markdown(f"### {tema}")  
+        for subtema in lista_subtemas:
+            st.markdown(f"- {subtema}")  
     
     if st.button("Continuar", key="btn_next"):
         st.session_state["modo"] = "explicacion"
@@ -277,7 +275,6 @@ elif st.session_state["modo"] == "explicacion":
 
     if tema < len(st.session_state["temas"]):
         st.title("Explicación del Plan de Estudio")
-        st.success("¡Bienvenido a la explicación detallada del plan!")
 
         if tema not in st.session_state["explicaciones"]:
             # SOLO muestra spinner si de verdad vas a generar la explicación
@@ -295,7 +292,8 @@ elif st.session_state["modo"] == "explicacion":
             st.toast("Explicación lista ✅", icon="📚")
 
         # Mostrar la explicación ya guardada
-        st.write(st.session_state["explicaciones"][tema])
+        explicacion_corregida = corregir_latex_llm(st.session_state["explicaciones"][tema])
+        st.markdown(explicacion_corregida, unsafe_allow_html=True)
 
         st.write("---")
         st.write("¿Pasamos al siguiente tema?")
@@ -305,6 +303,7 @@ elif st.session_state["modo"] == "explicacion":
         with col1:
             if st.button("Siguiente tema", key=f"btn_siguiente_tema_{tema}"):
                 st.session_state["tema_actual"] += 1
+                st.session_state["contexto_recuperado"] = {}
                 st.rerun()
     else:
         st.write("---")
@@ -322,6 +321,9 @@ elif st.session_state["modo"] == "explicacion":
             st.session_state["plan_actual"] = None
             st.session_state["temas"] = []
             st.session_state["subtemas"] = {}
+            st.session_state["explicacion"] = ""
+            st.session_state["contexto_recuperado"] = {}
+            st.session_state["explicaciones"] = {}
             st.rerun()
 
 elif st.session_state["modo"] == "libre":

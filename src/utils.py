@@ -2,6 +2,8 @@ import random
 import json
 from langchain.prompts import ChatPromptTemplate
 from pathlib import Path
+import streamlit as st
+import re
 
 preguntas_path = Path('./data/preguntas.json')
 
@@ -26,3 +28,33 @@ def crear_prompt(ruta_archivo):
         ("system", texto_prompt)
     ])
     return prompt
+
+#--- mostrar feedback ---
+def mostrar_feedback():
+    fortalezas_md = "\n".join(f"- {item}" for item in st.session_state["fortalezas"])        
+    st.markdown("### Fortalezas")
+    st.markdown(fortalezas_md)
+
+    debilidades_md = "\n".join(f"- {item}" for item in st.session_state["debilidades"])
+    st.markdown("### Debilidades")
+    st.markdown(debilidades_md)
+    
+    st.markdown(f"### Detalle por pregunta nivel: {st.session_state['nivel']}")
+    
+    for d in st.session_state["detalle"]:
+        st.markdown(f"**Pregunta:** {d['pregunta']}")
+        st.markdown(f"**Respuesta:** {d['respuesta']}")
+        st.markdown(f"**Tema:** {d['tema']}")
+        st.markdown(f"**Puntaje:** {d['puntaje']}")
+        st.markdown(f"**Feedback:** {d['feedback']}")
+        st.markdown("---")
+
+#--- corregir markdown ----
+def corregir_latex_llm(texto):
+    # Reemplaza [ ... ] por ecuaciones en bloque ($$...$$)
+    texto = re.sub(r'\[\s*(.*?)\s*\]', r'$$\1$$', texto)
+
+    # Corrige posibles duplicaciones por listas numeradas (opcional, si ves esto)
+    texto = re.sub(r'\n\d+\.\s*', r'\n\n### ', texto)
+
+    return texto
