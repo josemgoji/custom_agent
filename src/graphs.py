@@ -1,6 +1,4 @@
-from pyexpat.errors import messages
 from langgraph.graph import StateGraph, END , START
-from openai import chat
 from typing_extensions import TypedDict
 from typing import List, Dict, Any
 from langchain_openai import ChatOpenAI
@@ -9,11 +7,10 @@ from langchain_core.output_parsers.json import JsonOutputParser
 from langchain_chroma import Chroma 
 from langchain_openai import OpenAIEmbeddings
 from pathlib import Path
-from langchain.tools import Tool
 from langchain.tools import tool
 from langchain_community.tools import DuckDuckGoSearchRun
 from langgraph.prebuilt import tools_condition
-from langchain_core.messages import SystemMessage, AIMessage, HumanMessage
+from langchain_core.messages import SystemMessage
 from langgraph.prebuilt.tool_node import ToolNode
 from langgraph.graph.message import AnyMessage
 from langgraph.graph.message import add_messages

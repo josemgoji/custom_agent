@@ -3,7 +3,7 @@
 from math import e
 import streamlit as st
 from pathlib import Path
-from langchain_core.messages import SystemMessage, AIMessage, HumanMessage
+from langchain_core.messages import HumanMessage
 import os
 from dotenv import load_dotenv
 from graphs import (
@@ -89,7 +89,7 @@ with st.sidebar:
         st.session_state["modo_detectado"] = True
         st.rerun()
     
-st.title("Agente asitente de estudio de estadística")
+st.title("Agente asitente de estudio de estadística custom")
 
 graph_feedback, graph_plan, graph_explicacion, graph_libre = build_graphs()
 
