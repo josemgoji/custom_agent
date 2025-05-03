@@ -87,7 +87,7 @@ graph_feedback, graph_plan, graph_explicacion, graph_libre = build_graphs()
 
 # --- Paso 1: Elegir modo de interacción ---
 if not st.session_state["modo_detectado"]:
-    st.title("Agente asitente de estudio de estadística custom")
+    st.title("Agente asitente de estudio de estadística")
     st.markdown("## Bienvenido ✨")
     st.markdown("""
     Elige cómo quieres interactuar con el agente de estudio:
