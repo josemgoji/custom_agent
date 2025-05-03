@@ -91,7 +91,7 @@ if not st.session_state["modo_detectado"]:
     st.markdown("""
     Elige cómo quieres interactuar con el agente de estudio:
     
-    - **Modo Guiado**: Responde un quiz para evaluar tu nivel y recibir feedback detallado.
+    - **Modo Guiado**: Responde un quiz para evaluar tu nivel, y luego te guiare paso a paso en el estudio.
     - **Modo Libre**: Pregunta cualquier cosa de estadística sin seguir una ruta fija.
     """)
     
