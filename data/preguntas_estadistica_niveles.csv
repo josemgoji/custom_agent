@@ -1,0 +1,61 @@
+nivel,tema,pregunta
+intermedio,Medidas de tendencia central,¿Qué condiciones deben cumplirse para que la media sea una buena medida de centralización?
+intermedio,Medidas de tendencia central,¿En qué situaciones es preferible usar la mediana en lugar de la media?
+intermedio,Medidas de tendencia central,¿Qué representa la moda y cómo se interpreta en conjuntos multimodales?
+intermedio,Medidas de tendencia central,¿Cómo afecta un valor extremo a la media y a la mediana?
+intermedio,Medidas de tendencia central,¿Cuál es la diferencia entre media muestral y media poblacional?
+intermedio,Medidas de dispersión,¿Qué indica una desviación estándar alta respecto a los datos?
+intermedio,Medidas de dispersión,¿Cómo se calcula la varianza a partir de la desviación estándar?
+intermedio,Medidas de dispersión,¿Qué papel cumple el rango en el análisis exploratorio?
+intermedio,Medidas de dispersión,¿Por qué es importante considerar la desviación estándar junto con la media?
+intermedio,Medidas de dispersión,¿Qué unidades tiene la varianza y cómo afecta eso su interpretación?
+intermedio,Resumen de datos con percentiles y gráficos,¿Qué indica el percentil 90 en un conjunto de datos?
+intermedio,Resumen de datos con percentiles y gráficos,¿Cómo se interpretan los cuartiles en un diagrama de caja?
+intermedio,Resumen de datos con percentiles y gráficos,¿Qué información proporciona un boxplot sobre la dispersión y simetría?
+intermedio,Resumen de datos con percentiles y gráficos,¿Qué representa el rango intercuartílico y cómo se calcula?
+intermedio,Resumen de datos con percentiles y gráficos,¿Cómo identificar datos extremos usando un boxplot?
+intermedio,Identificación de valores atípicos y análisis exploratorio,¿Qué métodos se pueden usar para detectar valores atípicos?
+intermedio,Identificación de valores atípicos y análisis exploratorio,¿Qué impacto pueden tener los outliers en las medidas de tendencia central?
+intermedio,Identificación de valores atípicos y análisis exploratorio,¿Qué criterios se usan para determinar si un valor es un outlier?
+intermedio,Identificación de valores atípicos y análisis exploratorio,¿Cómo se visualizan los outliers en un diagrama de caja?
+intermedio,Identificación de valores atípicos y análisis exploratorio,¿Por qué es importante no eliminar automáticamente los valores atípicos?
+avanzado,Fundamentos de probabilidad,¿Cuál es la diferencia entre probabilidad clásica y frecuentista?
+avanzado,Fundamentos de probabilidad,¿Qué es el espacio muestral y cómo se define?
+avanzado,Fundamentos de probabilidad,¿Qué condiciones deben cumplirse para aplicar la regla de la suma?
+avanzado,Fundamentos de probabilidad,¿Cómo se interpreta una probabilidad igual a cero o a uno?
+avanzado,Fundamentos de probabilidad,¿Qué significa que dos eventos sean mutuamente excluyentes?
+avanzado,Eventos compuestos e independencia,¿Qué distingue un evento independiente de uno dependiente?
+avanzado,Eventos compuestos e independencia,¿Cómo se calcula la probabilidad de la intersección de dos eventos independientes?
+avanzado,Eventos compuestos e independencia,¿Qué implica la independencia condicional entre variables?
+avanzado,Eventos compuestos e independencia,¿Qué ocurre si se asume independencia cuando no la hay?
+avanzado,Eventos compuestos e independencia,¿Cómo se representa gráficamente la independencia de eventos?
+avanzado,Probabilidad condicional y teorema de Bayes,¿Cómo se interpreta una probabilidad condicional?
+avanzado,Probabilidad condicional y teorema de Bayes,¿Qué fórmula se usa para calcular la probabilidad condicional?
+avanzado,Probabilidad condicional y teorema de Bayes,¿Cómo se aplica el teorema de Bayes en un problema diagnóstico?
+avanzado,Probabilidad condicional y teorema de Bayes,¿Cuál es la diferencia entre \( P(A|B) \) y \( P(B|A) \)?
+avanzado,Probabilidad condicional y teorema de Bayes,¿Qué rol juega la probabilidad total en el teorema de Bayes?
+avanzado,Distribuciones discretas y binomial,¿Qué características definen una variable aleatoria discreta?
+avanzado,Distribuciones discretas y binomial,¿Qué condiciones deben cumplirse para aplicar la distribución binomial?
+avanzado,Distribuciones discretas y binomial,¿Cómo se calcula el valor esperado de una variable binomial?
+avanzado,Distribuciones discretas y binomial,¿Qué representa la varianza de una distribución binomial?
+avanzado,Distribuciones discretas y binomial,¿En qué situaciones reales se aplica la distribución binomial?
+basico,Fundamentos de la estadística,¿Cuál es la diferencia entre estadística descriptiva e inferencial?
+basico,Fundamentos de la estadística,¿Qué significa el término “población” en estadística?
+basico,Fundamentos de la estadística,¿Qué es una muestra representativa y por qué es importante?
+basico,Fundamentos de la estadística,¿Qué papel juegan los datos en el análisis estadístico?
+basico,Fundamentos de la estadística,¿Cuál es la utilidad principal de la estadística en investigaciones científicas?
+basico,Tipos y niveles de datos,¿Qué diferencia hay entre datos cualitativos y cuantitativos?
+basico,Tipos y niveles de datos,¿Qué caracteriza a una escala de medición nominal?
+basico,Tipos y niveles de datos,¿En qué se diferencia la escala ordinal de la de intervalo?
+basico,Tipos y niveles de datos,¿Por qué los datos en escala de razón permiten realizar operaciones matemáticas completas?
+basico,Tipos y niveles de datos,"¿Cómo se clasifican los siguientes datos: temperatura, color de ojos, número de hijos?"
+basico,Diseño de estudios y muestreo,¿Qué distingue a un estudio observacional de un experimento controlado?
+basico,Diseño de estudios y muestreo,¿Cuáles son las principales técnicas de muestreo aleatorio?
+basico,Diseño de estudios y muestreo,¿Qué es el sesgo en un estudio estadístico y cómo puede evitarse?
+basico,Diseño de estudios y muestreo,¿Qué elementos debe tener un experimento bien diseñado?
+basico,Diseño de estudios y muestreo,¿Qué diferencias hay entre un estudio transversal y uno longitudinal?
+basico,Representación gráfica de datos,¿Qué tipos de gráficos se usan para representar datos cualitativos?
+basico,Representación gráfica de datos,¿Qué información proporciona un histograma que no da un gráfico de barras?
+basico,Representación gráfica de datos,¿Cómo se interpreta un polígono de frecuencia?
+basico,Representación gráfica de datos,¿Qué ventajas tiene usar un diagrama de pastel?
+basico,Representación gráfica de datos,¿Qué errores comunes se deben evitar al construir gráficos estadísticos?
