@@ -199,7 +199,9 @@ Si no es suficiente, usa tu conocimiento general.
 Información recuperada:
 ---
 {context}
----""")
+---
+La explicación debe estar escrita en **formato markdown** claro y estructurado y que sea compatible con  streamlit.
+""")
         messages = [system_message] + messages
 
     # Invocar el modelo
