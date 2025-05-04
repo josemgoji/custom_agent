@@ -10,3 +10,13 @@ query,answer
 ¿Qué criterios se usan para determinar si un valor es un outlier?,Un outlier (valor atípico) es un dato que se aleja significativamente del resto del conjunto
 ¿Qué métodos se pueden usar para detectar valores atípicos?,Rango intercuartílico (IQR) - Puntaje Z (Z-score) - Regla de 3 sigmas - Boxplot (diagrama de caja)
 ¿En qué situaciones es preferible usar la mediana en lugar de la media?,Distribuciones asimétricas o sesgadas - Presencia de valores atípicos (outliers) - Datos en escala ordinal
+¿Qué indica una desviación estándar alta respecto a los datos?,"Indica que los datos están muy dispersos respecto a la media, es decir, hay una alta variabilidad en el conjunto."
+¿Qué representa la moda y cómo se interpreta en conjuntos multimodales?,"La moda es el valor que más se repite; en conjuntos multimodales hay varias modas, lo que indica múltiples concentraciones de datos."
+¿Qué papel cumple el rango en el análisis exploratorio?,"El rango muestra la diferencia entre el valor máximo y el mínimo, dando una idea general de la dispersión de los datos."
+¿Qué condiciones deben cumplirse para aplicar la distribución binomial?,"Número fijo de ensayos, solo dos posibles resultados por ensayo, probabilidad constante de éxito y ensayos independientes."
+¿Qué significa el término “población” en estadística?,Se refiere al conjunto total de elementos sobre los cuales se desea obtener información o realizar inferencias.
+¿Cómo se representa gráficamente la independencia de eventos?,"Con diagramas de Venn sin intersección, o con tablas de contingencia donde la probabilidad conjunta equivale al producto de las marginales."
+¿Qué información proporciona un boxplot sobre la dispersión y simetría?,"Muestra la mediana, los cuartiles, el rango intercuartílico y los posibles valores atípicos, lo que permite evaluar simetría y variabilidad."
+¿Cómo se calcula el valor esperado de una variable binomial?,Multiplicando el número de ensayos por la probabilidad de éxito (E[X] = n * p).
+¿En qué se diferencia la escala ordinal de la de intervalo?,"La escala ordinal permite ordenar los datos, pero no medir distancias exactas entre ellos, a diferencia de la escala de intervalo."
+¿Qué errores comunes se deben evitar al construir gráficos estadísticos?,"No etiquetar ejes, usar escalas inadecuadas, sobrecargar de información o elegir el tipo de gráfico incorrecto para el tipo de dato."

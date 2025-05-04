@@ -71,7 +71,7 @@ for example in examples:
     veredicto.append(lc_verdict)
     scores.append(is_correct)   
     
-df["respuesta_agente"] = results
+df["respuesta_agente"] = respuestas_generadas
 df["evaluacion"] = [r["reasoning"] for r in results]
 df["veredicto"] = veredicto
 df["puntaje"] = scores
