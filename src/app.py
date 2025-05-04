@@ -1,5 +1,3 @@
-# app.py
-
 import streamlit as st
 from langchain_core.messages import HumanMessage, AIMessage
 from dotenv import load_dotenv
@@ -55,18 +53,26 @@ if 'message_history' not in st.session_state:
     st.session_state.message_history = []
 if "modo_anterior" not in st.session_state:
     st.session_state["modo_anterior"] = None
+if "plan_actual" not in st.session_state:
+    st.session_state["plan_actual"] = None
     
 # --- Botón flotante para cambiar de modo ---
 with st.sidebar:
     if st.session_state.get("modo_detectado", False):
-        st.success(f"Modo activo: {st.session_state['modo'].capitalize()}")
+        st.success(f"🟢 Modo activo: {st.session_state['modo'].capitalize()}")
     
     st.markdown("## Cambiar de Modo")
     if st.session_state["modo"] == "libre":
         if st.button("Modo Guiado"):
-            st.session_state["modo_anterior"] = st.session_state["modo"]
-            st.session_state["modo"] = "guiado"
-            st.session_state["modo_detectado"] = True
+            if st.session_state["modo_anterior"] is None:
+                st.session_state["modo_anterior"] = st.session_state["modo"]
+                st.session_state["modo"] = "guiado"
+                st.session_state["modo_detectado"] = True
+            else:
+                st.session_state["modo"] = st.session_state["modo_anterior"]
+                st.session_state["modo_anterior"] = "libre"
+                st.session_state["modo_detectado"] = True
+                
             st.rerun()
     else:    
         if st.button("Modo Libre"):
@@ -75,25 +81,55 @@ with st.sidebar:
             st.session_state["modo_detectado"] = True
             st.rerun()
 
-    if st.button("Modo Anterior"):
-        if st.session_state["modo_anterior"] is not None:
-            st.session_state["modo"] = st.session_state["modo_anterior"]
-            st.session_state["modo_detectado"] = True
-            st.rerun()
-        else:
-            st.warning("No hay un modo anterior para volver.")
+    if st.button("Reiniciar"):
+        st.session_state["user_input"] = ""
+        st.session_state["modo"] = ""
+        st.session_state["pregunta_idx"] = 0
+        st.session_state["respuestas"] = []
+        st.session_state["feedback"] = {}
+        st.session_state["nivel"] = "basico"
+        st.session_state["fortalezas"] = []
+        st.session_state["debilidades"] = []
+        st.session_state["puntaje_promedio"] = 0
+        st.session_state["detalle"] = []
+        st.session_state["preguntas_seleccionadas"] = []
+        st.session_state["rerun_counter"] = 0
+        st.session_state["estado_quiz"] = "en_curso"
+        st.session_state["modo_detectado"] = False
+        st.session_state["temas"] = []
+        st.session_state["subtemas"] = {}
+        st.session_state["tema_actual"] = 0
+        st.session_state["contexto_recuperado"] = {}
+        st.session_state["explicacion"] = ""
+        st.session_state["messages"] = []
+        st.session_state.message_history = []
+        st.session_state["modo_anterior"] = None
+        st.session_state["plan_actual"] = None
+        
+    
+    if st.session_state["plan_actual"] is not None:
+        st.markdown("## Plan de Estudio")
+        subtemas = st.session_state["plan_actual"].get("subtemas", {})
+        for i, (tema, lista_subtemas) in enumerate(subtemas.items(), start=1):
+            with st.expander(f"Módulo {i}: {tema}"):
+                for subtema in lista_subtemas:
+                    st.markdown(f"- {subtema}")
+        
+                
 
 graph_feedback, graph_plan, graph_explicacion, graph_libre = build_graphs()
 
 # --- Paso 1: Elegir modo de interacción ---
 if not st.session_state["modo_detectado"]:
-    st.title("Agente asitente de estudio de estadística")
+    st.title("📊 Agente Asistente de Estadística")
     st.markdown("## Bienvenido ✨")
     st.markdown("""
-    Elige cómo quieres interactuar con el agente de estudio:
-    
-    - **Modo Guiado**: Responde un quiz para evaluar tu nivel, y luego te guiare paso a paso en el estudio.
-    - **Modo Libre**: Pregunta cualquier cosa de estadística sin seguir una ruta fija.
+    **¿Listo para aprender estadística de forma divertida y personalizada?**
+
+    Elige cómo quieres interactuar con tu agente de estudio:
+
+    - 🧭 **Modo Guiado**: Responde un quiz para evaluar tu nivel y te guiaré paso a paso en el estudio.
+    - 🗣️ **Modo Libre**: Haz cualquier pregunta de estadística, ¡sin rutas fijas!
     """)
     
     modo = st.radio(
@@ -110,7 +146,7 @@ if not st.session_state["modo_detectado"]:
 
 # --- modo guiado ---
 if st.session_state["modo"] == "guiado":
-    st.title("Quiz cononocimientos previos")
+    st.title("Quiz 📝 ")
     # --- realizar el quiz ---
     # crear las preguntas
     if not st.session_state["preguntas_seleccionadas"]:
@@ -121,12 +157,13 @@ if st.session_state["modo"] == "guiado":
 
     # mostrar las preguntas una a una
     if idx < len(preguntas_seleccionadas):
-        st.subheader(f"Nivel actual: {st.session_state['nivel'].capitalize()}")
-        st.markdown("Primero te haremos un quiz para ver en qué nivel estás.")
+        if st.session_state["nivel"] == "basico":
+            st.markdown("**Primero te haremos un quiz para ver en qué nivel estás.**")
+        st.markdown(f"### 🎯 Nivel actual: {st.session_state['nivel'].capitalize()}")
         pregunta = preguntas_seleccionadas[idx]["pregunta"]
         st.markdown(f"**Pregunta {idx+1}:** {pregunta}")
-        respuesta = st.text_area("Tu respuesta:", key=f"respuesta_input_{idx}_{st.session_state['rerun_counter']}")
-        if st.button("Enviar respuesta", key=f"btn_respuesta_{idx}_{st.session_state['rerun_counter']}") or respuesta:
+        respuesta = st.text_area("✍️ Escribe tu respuesta aquí:", key=f"respuesta_input_{idx}_{st.session_state['rerun_counter']}")
+        if st.button("🚀 Enviar respuesta", key=f"btn_respuesta_{idx}_{st.session_state['rerun_counter']}") or respuesta:
             respuestas = st.session_state.get("respuestas", [])
             respuestas.append(respuesta)
             st.session_state["respuestas"] = respuestas
@@ -167,53 +204,62 @@ if st.session_state["modo"] == "guiado":
         # Clasificar el resultado y actualizar el estado del quiz
         if promedio >= 3:
             
-            mostrar_feedback()
-            
             if st.session_state["nivel"] == "basico":
-                st.success(f"¡Felicidades! Has aprobado el nivel básico con un promedio de {promedio}.")
+                st.success(f"🎉 ¡Felicidades! Has aprobado el nivel básico con un promedio de {promedio} ⭐")
+                mostrar_feedback()
+                st.balloons()
                 st.session_state["nivel"] = "intermedio"
                 st.session_state["pregunta_idx"] = 0
                 st.session_state["respuestas"] = []
                 st.session_state["feedback"] = {}
                 st.session_state["detalle"] = []
                 st.session_state["preguntas_seleccionadas"] = seleccionar_preguntas("intermedio")
+                nivel = st.session_state["nivel"]
                 
-                if st.button("Continuar", key="btn_next_lv"):
+                if st.button(f"Continuar al examen de nivel {nivel}", key="btn_next_lv"):
                     st.rerun()
                 
             elif st.session_state["nivel"] == "intermedio":
-                st.success(f"¡Felicidades! Has aprobado el nivel intermedio con un promedio de {promedio}.")
+                st.success(f"🎉 ¡Felicidades! Has aprobado el nivel intermedio con un promedio de {promedio} ⭐")
+                mostrar_feedback()
+                st.balloons()
                 st.session_state["nivel"] = "avanzado"
                 st.session_state["pregunta_idx"] = 0
                 st.session_state["respuestas"] = []
                 st.session_state["feedback"] = {}
                 st.session_state["detalle"] = []
                 st.session_state["preguntas_seleccionadas"] = seleccionar_preguntas("avanzado")
+                nivel = st.session_state["nivel"]
                 
-                if st.button("Continuar", key="btn_next_lv"):
+                if st.button(f"Continuar al examen de nivel {nivel}", key="btn_next_lv"):
                     st.rerun()
                 
             else:
-                st.success(f"¡Felicidades! Has aprobado todos los niveles con un promedio de {promedio}!")
-                st.session_state["estado_quiz"] = "finalizado"
+                st.success(f"¡🎉 ¡Felicidades! Has aprobado todos los niveles con un promedio de {promedio} ⭐")
+                st.write("¡Haz compoletado todos los niveles, ahora solo te queda sguir realizandome pregunats para continuar aprendiendo! 🎓")
+                mostrar_feedback()
+                st.balloons()
+                #st.session_state["estado_quiz"] = "finalizado"
+                if st.button("Continuar al modo libre", key="btn_next_lv"):
+                    st.session_state["modo"] = "libre"
+                    st.rerun()
         else:
-            st.error(f"No has aprobado el nivel {st.session_state['nivel']}. Tu promedio fue {promedio}.")
+            st.error(f"😕 No has aprobado el nivel {st.session_state['nivel']}. Tu promedio fue {promedio}. ¡No te desanimes, puedes intentarlo de nuevo!")
             st.session_state["estado_quiz"] = "finalizado"
             
             
         # --- Mostrar el feedback y las fortalezas/debilidades ---
         # cuando termina el examen si aprueba todo o reprueba un nivel
         if st.session_state["modo"] == "guiado" and st.session_state["estado_quiz"] == "finalizado":
-            st.markdown("### ¿Qué deseas hacer ahora?")
+            st.markdown("### 🤔 ¿Qué deseas hacer ahora?")
             opcion = st.radio(
-                "Selecciona una opción:",
-                ("Repetir el examen", "Comenzar a estudiar"),
+                "Elige una opción para continuar tu aprendizaje:",
+                ("🔄 Repetir el examen", "📚 Comenzar a estudiar"),
                 key="opcion_post_feedback"
             )
 
             if st.button("Continuar", key="btn_continuar_post_feedback"):
-                if opcion == "Repetir el examen":
-                    st.session_state["nivel"] = "basico"
+                if opcion == "🔄 Repetir el examen":
                     st.session_state["pregunta_idx"] = 0
                     st.session_state["respuestas"] = []
                     st.session_state["feedback"] = {}
@@ -226,7 +272,7 @@ if st.session_state["modo"] == "guiado":
                     st.session_state["modo_detectado"] = True
                     st.session_state["user_input"] = st.session_state["user_input"]
                     st.rerun()
-                elif opcion == "Comenzar a estudiar":
+                elif opcion == "📚 Comenzar a estudiar":
                     st.session_state["modo"] = "estudio"
                     st.session_state["estado_quiz"] = "en_curso"
                     st.rerun()
@@ -235,10 +281,8 @@ if st.session_state["modo"] == "guiado":
             
 # -- modo de explicacion --
 elif st.session_state["modo"] == "estudio":
-    st.title("Plan de Estudio")
-
-    if "plan_actual" not in st.session_state:
-        st.session_state["plan_actual"] = None
+    st.title("📚 Plan de Estudio Personalizado")
+    st.markdown("🧠 Se generará un plan de estudio basado en tus fortalezas y debilidades. Consiste en 3 módulos, donde en cada uno se explicará un tema y sus subtemas. Al finalizar, ¡realizaremos un examen para ver cuánto has aprendido!")
 
     # Si no hay un plan generado, generarlo
     if not st.session_state["plan_actual"]:
@@ -259,10 +303,10 @@ elif st.session_state["modo"] == "estudio":
 
     # Mostrar el plan actual
     subtemas = st.session_state["plan_actual"].get("subtemas", {})
-    for tema, lista_subtemas in subtemas.items():
-        st.markdown(f"### {tema}")  
+    for i, (tema, lista_subtemas) in enumerate(subtemas.items(), start=1):
+        st.markdown(f"### Módulo {i}: {tema}")
         for subtema in lista_subtemas:
-            st.markdown(f"- {subtema}")  
+            st.markdown(f"- {subtema}")
     
     if st.button("Continuar", key="btn_next"):
         st.session_state["modo"] = "explicacion"
@@ -276,11 +320,10 @@ elif st.session_state["modo"] == "explicacion":
         st.session_state["explicaciones"] = {}
 
     if tema < len(st.session_state["temas"]):
-        st.title("Explicación del Plan de Estudio")
+        st.title(f"Plan de Estudio Modulo {tema+1}")
 
         if tema not in st.session_state["explicaciones"]:
-            # SOLO muestra spinner si de verdad vas a generar la explicación
-            with st.spinner(f"🕒 Cargando explicación del tema {st.session_state['temas'][tema]}"):
+            with st.spinner(f"🕒 Cargando explicación del Modulo {tema + 1}: {st.session_state['temas'][tema]}"):
                 explicacion = graph_explicacion.invoke({
                     "tema_actual": tema,
                     "nivel": st.session_state["nivel"],
@@ -298,7 +341,6 @@ elif st.session_state["modo"] == "explicacion":
         st.markdown(explicacion_corregida, unsafe_allow_html=True)
 
         st.write("---")
-        st.write("¿Pasamos al siguiente tema?")
 
         col1, col2 = st.columns(2)
 
@@ -308,8 +350,11 @@ elif st.session_state["modo"] == "explicacion":
                 st.session_state["contexto_recuperado"] = {}
                 st.rerun()
     else:
+        st.title("🎉 ¡Plan de Estudio Finalizado! 🎉")
         st.write("---")
-        st.write("felicidades has terminado el plan de estudio, hagamos nuevamente el examen para reforzar los conocimientos")
+        st.balloons()
+        st.success("🥳 **¡Felicidades!** Has completado todo el plan de estudio. Ahora realizaremos nuevamente el examen para validar los conocimientos adquiridos y ver cuánto has avanzado. ¡Sigue así, eres increíble! 🚀")
+
         
         if st.button("Continuar", key="btn_continuar"):
             st.session_state['modo'] = "guiado"
@@ -326,11 +371,14 @@ elif st.session_state["modo"] == "explicacion":
             st.session_state["explicacion"] = ""
             st.session_state["contexto_recuperado"] = {}
             st.session_state["explicaciones"] = {}
+            st.session_state["detalle"] = []
+            st.session_state["feedback"] = {}
             st.rerun()
 
 elif st.session_state["modo"] == "libre":
-    st.write("Estás en modo libre. Aquí puedes hacer preguntas directamente.")
-    user_input = st.chat_input("Escriba su pregunta aquí:")
+    st.title("🗣️ Modo de Preguntas Libres")
+    st.write("¡Estás en modo libre! Aquí puedes hacer cualquier pregunta de estadística y te responderé al instante. 🤓")
+    user_input = st.chat_input("💬 Escribe tu pregunta aquí:")
 
     if user_input:
         st.session_state.message_history.append({'content': user_input, 'type': 'user'})
