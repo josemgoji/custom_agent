@@ -41,14 +41,15 @@ class State(TypedDict):
     messages: Annotated[list[AnyMessage], add_messages]
     
 # --- vector store ---
-persist_path = Path('./chroma')
+BASE_DIR = Path(__file__).resolve().parent.parent
+persist_path = BASE_DIR/'chroma'
+
 vectorstore = Chroma(persist_directory=str(persist_path), embedding_function=OpenAIEmbeddings())
 
 retriever = vectorstore.as_retriever(
     search_type="similarity",
     search_kwargs={"k": 3}
 )
-llm = ChatOpenAI(model="o4-mini")
 
 # --- difinir tools ----
 search_tool = DuckDuckGoSearchRun()
@@ -64,8 +65,7 @@ PROMPT_PLAN = crear_prompt(prompts_path/'prompt_plan.txt')
 PROMPT_EXPLICACION = crear_prompt(prompts_path/'prompt_exp.txt')
 
 # --- definir llm ---
-llm = ChatOpenAI(model="o4-mini")
-
+llm = ChatOpenAI(model="gpt-4.1")
 # --- nodos ---
 ## --- nodo calificar quiz y feedback ---
 def nodo_generar_feedback(state: State):
@@ -73,7 +73,9 @@ def nodo_generar_feedback(state: State):
     chain_quiz = PROMPT_QUIZ | llm | parser
     
     respuestas = state.get("respuestas", [])
+    
     preguntas_seleccionadas = state.get("preguntas_seleccionadas", [])
+    
     respuestas_usuario = []
     for idx, pregunta in enumerate(preguntas_seleccionadas):
         if idx < len(respuestas):
@@ -81,7 +83,7 @@ def nodo_generar_feedback(state: State):
                 "pregunta": pregunta["pregunta"],
                 "respuesta": respuestas[idx],
                 "tema": pregunta["tema"]
-            })
+            })    
     data = chain_quiz.invoke({
         "respuestas_usuario": str(respuestas_usuario)
     })
