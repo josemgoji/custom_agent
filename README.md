@@ -10,9 +10,7 @@ Este proyecto es un agente educativo diseñado para ayudar a estudiantes univers
 - **Modo guiado**: El agente te evalúa con un test por niveles (básico, intermedio y avanzado), identifica tus fortalezas/debilidades y genera un plan de estudios personalizado a partir de estas, y te guía con explicaciones tema por tema.
 - Puedes alternar entre ambos modos en cualquier momento, según tus necesidades.
 
-### 🔁 Diagrama de flujo del agente
-
-![Diagrama de flujo](diagrams/Flujo%20de%20proceso.png)
+## 📄 [Ver documentación completa del agente](Documentacion_agente.pdf)
 
 ---
 
